@@ -1,0 +1,13 @@
+[package]
+name = "chetars-spatial-gui"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+description = "A 3D-style spatial GUI menu for Horizon"
+
+[lib]
+path = "mixins/chetars/runtime.rs"
+
+[workspace]
+resolver = "2"
