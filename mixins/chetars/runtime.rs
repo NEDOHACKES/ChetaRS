@@ -14,6 +14,23 @@ pub struct Panel {
 
 static SELECTED: std::sync::atomic::AtomicU8 =
     std::sync::atomic::AtomicU8::new(0);
+static OPEN: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+pub fn is_open() -> bool {
+    OPEN.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+pub fn toggle_open() -> bool {
+    let next = !is_open();
+    OPEN.store(next, std::sync::atomic::Ordering::Relaxed);
+    next
+}
+
+pub fn close() {
+    OPEN.store(false, std::sync::atomic::Ordering::Relaxed);
+}
+
 static VIEW_WIDTH: std::sync::atomic::AtomicU32 =
     std::sync::atomic::AtomicU32::new(854.0f32.to_bits());
 static VIEW_HEIGHT: std::sync::atomic::AtomicU32 =
