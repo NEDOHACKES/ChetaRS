@@ -1,22 +1,34 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.2.2.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.3.0.
 
-## Interface
+## Spatial display
 
-- Press **F6** to show or hide the floating display without opening a Minecraft screen.
-- The interface is a camera-facing 3D screen drawn with Horizon's native world-canvas API.
-- The display has a dark frame, side navigation, shadow and a large **blank white content area**.
-- HOME, PROFILE and SETTINGS are visual navigation tabs.
-- The white area is intentionally empty. It does not show the player inventory, container slots, item stacks or inventory texture.
-- The overlay stays non-modal: WASD, jump, mouse-look, attacks and normal gameplay input remain active.
-- The panel uses the active camera orientation and fixed world-space sizing. It does not create a `Screen::Mod`, so it does not release the mouse or stop movement.
-- Press **Escape** to hide the overlay (the vanilla pause menu may also open).
-- Use **Left Arrow** and **Right Arrow** to switch tabs while the overlay is visible.
+- Press **F6** to show or hide the floating display.
+- The panel is a camera-facing 3D display drawn through Horizon's native world-canvas API.
+- The main content area is a clean white surface. No player inventory, container slots, item stacks or inventory texture are used.
+- The display has a dark frame, side navigation, shadow and animated settings switches.
+
+## Position and movement
+
+- **Keep at coordinates** is enabled by default. The panel is placed in the world when first shown and then stays at that world position and orientation while you turn your head or walk.
+- Hold **Right Mouse Button** and move/turn the mouse to reposition the panel. The right-click action is consumed while dragging.
+- **Follow me** moves the panel in front of the current camera and keeps it there.
+- The two position modes are mutually exclusive.
+
+## Settings
+
+Select **SETTINGS** with **Right Arrow** (cycle through the left navigation tabs).
+- **Up / Down** selects one of the two setting rows.
+- **Enter** toggles the selected row.
+- You can also aim the crosshair at a setting row and left-click it.
+- Switch knobs animate smoothly between off and on.
+
+**F6** hides the panel; **Escape** also hides it (the vanilla pause menu may open as well).
 
 ## Visual reference
 
-The floating-screen presentation is inspired by [Spatial-GUI](https://github.com/tastytrash/Spatial-GUI), which presents existing Minecraft screens as immersive displays in the world.
+The floating-screen presentation is inspired by [Spatial-GUI](https://github.com/tastytrash/Spatial-GUI).
 
 ChetaRS is a native Rust implementation for Horizon. It does not port Spatial-GUI's Java mixins, screen capture pipeline or inventory UI. The central content is a newly drawn white world-space quad instead.
 
