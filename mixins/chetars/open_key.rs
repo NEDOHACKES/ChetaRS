@@ -19,15 +19,15 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
         return;
     }
 
-    // Number keys switch the navigation rail while movement and mouse-look
-    // remain fully available.
-    let selection = match key {
-        "key.keyboard.1" => Some(0),
-        "key.keyboard.2" => Some(1),
-        "key.keyboard.3" => Some(2),
+    // Arrow keys switch tabs without consuming the number keys used for
+    // Minecraft's hotbar selection.
+    let current = crate::game::chetars_spatial_gui::selected_button();
+    let next = match key {
+        "key.keyboard.arrowleft" => Some((current + 2) % 3),
+        "key.keyboard.arrowright" => Some((current + 1) % 3),
         _ => None,
     };
-    if let Some(index) = selection {
+    if let Some(index) = next {
         crate::game::chetars_spatial_gui::select_button(index);
     }
 }
