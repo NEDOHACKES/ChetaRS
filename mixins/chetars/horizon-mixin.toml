@@ -1,0 +1,49 @@
+[mod]
+id = "chetars_spatial_gui"
+version = "0.1.0"
+priority = 100
+
+[compatibility]
+horizon_revision = "3cfcd1e548b395dc903a84e24249ce3d32c5b12b"
+
+[[module]]
+id = "runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "chetars_spatial_gui"
+source = "runtime.rs"
+
+[[injection]]
+id = "open-key"
+kind = "HEAD"
+hook = "key"
+hook_version = 1
+helper = "open_key.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "key", ty = "&str", value = "key" },
+  { name = "pressed", ty = "bool", value = "pressed" }
+]
+
+[[injection]]
+id = "render"
+kind = "HEAD"
+hook = "screen_render_post"
+hook_version = 1
+helper = "render.rs"
+bindings = [
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "batch", ty = "&mut HudBatch", value = "batch" },
+  { name = "screen", ty = "&NativeScreenView<'_>", value = "screen" }
+]
+
+[[injection]]
+id = "mouse"
+kind = "HEAD"
+hook = "screen_mouse_button_pressed_pre"
+hook_version = 1
+helper = "mouse.rs"
+bindings = [
+  { name = "screen", ty = "&NativeScreenView<'_>", value = "screen" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "canceled", ty = "&mut bool", value = "canceled" }
+]
