@@ -1,17 +1,18 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.2.1.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.2.2.
 
 ## Interface
 
-- Press **F6** to open or close the floating display.
+- Press **F6** to show or hide the floating display without opening a Minecraft screen.
 - The interface is a camera-facing 3D screen drawn with Horizon's native world-canvas API.
 - The display has a dark frame, side navigation, shadow and a large **blank white content area**.
 - HOME, PROFILE and SETTINGS are visual navigation tabs.
 - The white area is intentionally empty. It does not show the player inventory, container slots, item stacks or inventory texture.
-- Clicks inside the spatial panel are consumed by the custom menu so they are not forwarded to Minecraft inventory slots.
-- The world renderer does not depend on `native_camera()`; the panel uses the active camera orientation and its own fixed world-space sizing.
-- Press **Escape** to close the menu.
+- The overlay stays non-modal: WASD, jump, mouse-look, attacks and normal gameplay input remain active.
+- The panel uses the active camera orientation and fixed world-space sizing. It does not create a `Screen::Mod`, so it does not release the mouse or stop movement.
+- Press **Escape** to hide the overlay (the vanilla pause menu may also open).
+- Use **1**, **2** or **3** to select HOME, PROFILE or SETTINGS while the overlay is visible.
 
 ## Visual reference
 
