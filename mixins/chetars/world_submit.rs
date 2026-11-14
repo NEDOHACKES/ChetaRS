@@ -205,9 +205,9 @@ fn world_submit(
             let track_x = row_x + row_width - track_w - 14.0;
             let track_y = y + (row_height - track_h) * 0.5;
             let blend = progress.clamp(0.0, 1.0);
-            let red = (0x65f32 + (0x33f32 - 0x65f32) * blend) as u32;
-            let green = (0x6Bf32 + (0xAAf32 - 0x6Bf32) * blend) as u32;
-            let blue = (0x78f32 + (0xFFf32 - 0x78f32) * blend) as u32;
+            let red = (0x65 as f32 + (0x33 as f32 - 0x65 as f32) * blend) as u32;
+            let green = (0x6B as f32 + (0xAA as f32 - 0x6B as f32) * blend) as u32;
+            let blue = (0x78 as f32 + (0xFF as f32 - 0x78 as f32) * blend) as u32;
             let track_color = 0xFF000000 | (red << 16) | (green << 8) | blue;
             paint(game, draw, rect(track_x, track_y, track_w, track_h, 11.0), track_color);
 
