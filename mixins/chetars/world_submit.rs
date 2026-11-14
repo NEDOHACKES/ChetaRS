@@ -38,7 +38,7 @@ fn world_submit(
     draw.translate([0.0, 0.0, -distance]);
     // The canvas lives in camera space, but all quads are submitted as
     // camera-relative world geometry and receive real world depth testing.
-    draw.scale([world_per_pixel, world_per_pixel, 0.00035]);
+    draw.scale([world_per_pixel, world_per_pixel, 0.006]);
 
     let paint = |game: &crate::game::Game<'_>,
                  draw: &mut NativeWorldDraw,
@@ -77,6 +77,19 @@ fn world_submit(
     };
 
     paint(game, draw, panel.shadow, 0xB0000000);
+
+    // Extruded side walls connect the front plate to its offset back plate.
+    // The offset creates visible depth instead of a coplanar HUD rectangle.
+    let side_faces = [
+        [panel.body[0], panel.body[1], panel.shadow[1], panel.shadow[0]],
+        [panel.body[1], panel.body[2], panel.shadow[2], panel.shadow[1]],
+        [panel.body[2], panel.body[3], panel.shadow[3], panel.shadow[2]],
+        [panel.body[3], panel.body[0], panel.shadow[0], panel.shadow[3]],
+    ];
+    for side in side_faces {
+        paint(game, draw, side, 0xFF172231);
+    }
+
     paint(game, draw, panel.body, 0xE9101720);
     paint(game, draw, panel.inner, 0xF0192430);
     paint(game, draw, panel.header, 0xF02A3444);
