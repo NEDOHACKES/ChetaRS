@@ -20,7 +20,7 @@ fn world_submit(
     let centre_y = height * 0.5;
 
     // Place the display in front of the camera, as a Spatial-GUI-style
-    // floating screen. Its size follows the current vertical FOV.
+    // floating screen. Its world-space width stays fixed across resolutions.
     let distance = 2.25f32;
     // Keep the display a consistent world-space width across window sizes.
     // The vanilla FOV is intentionally not required for this calculation.
