@@ -2,15 +2,21 @@
 
 A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13).
 
-## What it does
+## Interface
 
-- Opens and closes with F6.
-- Draws a floating panel as actual camera-facing geometry in the Minecraft world.
-- Uses Horizon's native `world_submit` / world-canvas rendering path, not the 2D HUD renderer.
-- The panel uses world depth testing and is drawn before the first-person hand, so nearby world geometry can occlude it.
-- Keeps three selectable buttons: HOME, PROFILE and SETTINGS.
-- Escape closes the menu.
-- The current buttons are visual/navigation placeholders; they do not change gameplay yet.
+- Press **F6** to open or close the floating display.
+- The interface is a camera-facing 3D screen drawn with Horizon's native world-canvas API.
+- The display has a dark frame, side navigation, shadow and a large **blank white content area**.
+- HOME, PROFILE and SETTINGS are visual navigation tabs.
+- The white area is intentionally empty. It does not show the player inventory, container slots, item stacks or inventory texture.
+- Clicks inside the spatial panel are consumed by the custom menu so they are not forwarded to Minecraft inventory slots.
+- Press **Escape** to close the menu.
+
+## Visual reference
+
+The floating-screen presentation is inspired by [Spatial-GUI](https://github.com/tastytrash/Spatial-GUI), which presents existing Minecraft screens as immersive displays in the world.
+
+ChetaRS is a native Rust implementation for Horizon. It does not port Spatial-GUI's Java mixins, screen capture pipeline or inventory UI. The central content is a newly drawn white world-space quad instead.
 
 ## Horizon compatibility
 
@@ -18,7 +24,7 @@ Pinned to Horizon commit:
 
 `9f42064c11efe7ef3e5ed2baad7ddc2a3b36eea0`
 
-The menu's world-canvas hook is available in this source revision. The launcher compiles native mods against the Horizon source revision used by the instance.
+The renderer uses Horizon's native `world_submit` / world-canvas hook and the public `horizon/white` atlas sprite.
 
 ## Build
 
