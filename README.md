@@ -18,7 +18,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 
 ## Settings
 
-Select **SETTINGS** with **Right Arrow** (cycle through the left navigation tabs).
+Select **SETTINGS** by pressing **Right Arrow** twice from HOME (Left / Right cycle through the three navigation tabs).
 - **Up / Down** selects one of the two setting rows.
 - **Enter** toggles the selected row.
 - You can also aim the crosshair at a setting row and left-click it.
