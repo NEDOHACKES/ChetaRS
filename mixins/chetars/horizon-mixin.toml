@@ -4,7 +4,7 @@ version = "0.1.0"
 priority = 100
 
 [compatibility]
-horizon_revision = "ec85e818d88dd530aa9a4f4b4a84e92ff163be64"
+horizon_revision = "9f42064c11efe7ef3e5ed2baad7ddc2a3b36eea0"
 
 [[module]]
 id = "runtime"
@@ -16,7 +16,6 @@ source = "runtime.rs"
 id = "open-key"
 kind = "HEAD"
 target = "horizon_client::game::native_hooks::Game<'_>::native_key"
-hook_version = 1
 helper = "open_key.rs"
 bindings = [
   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
@@ -28,7 +27,6 @@ bindings = [
 id = "render"
 kind = "HEAD"
 target = "horizon_client::game::native_hooks::Game<'_>::native_screen_render_post"
-hook_version = 1
 helper = "render.rs"
 bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
@@ -40,7 +38,6 @@ bindings = [
 id = "mouse"
 kind = "HEAD"
 target = "horizon_client::game::native_hooks::Game<'_>::native_screen_mouse_button_pressed_pre"
-hook_version = 1
 helper = "mouse.rs"
 bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
