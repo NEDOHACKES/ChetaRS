@@ -25,9 +25,11 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
         "key.keyboard.arrowright" => {
             crate::game::chetars_spatial_gui::select_button((tab + 1) % 3);
         }
-        "key.keyboard.arrowup" | "key.keyboard.arrowdown" if tab == 2 => {
-            let current = crate::game::chetars_spatial_gui::selected_setting();
-            crate::game::chetars_spatial_gui::select_setting((current + 1) % 2);
+        "key.keyboard.arrowup" if tab == 2 => {
+            crate::game::chetars_spatial_gui::select_setting(0);
+        }
+        "key.keyboard.arrowdown" if tab == 2 => {
+            crate::game::chetars_spatial_gui::select_setting(1);
         }
         "key.keyboard.enter" | "key.keyboard.keypad.enter" if tab == 2 => {
             crate::game::chetars_spatial_gui::toggle_selected_setting();
