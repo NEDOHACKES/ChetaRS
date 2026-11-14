@@ -1,19 +1,18 @@
 fn render(
     game: &crate::game::Game<'_>,
     batch: &mut HudBatch,
-    screen: &NativeScreenView<'_>,
+    _gui_hidden: bool,
+    _focused: bool,
 ) {
-    if screen.id != "mod"
-        || game.native_mod_screen() != Some("chetars_spatial_gui")
-    {
+    if !game.native_playing() {
         return;
     }
 
-    // The HUD hook only records the logical viewport and pointer. The menu
-    // itself is submitted by world_submit.rs into Minecraft's 3D world pass.
+    // No screen is opened: the actual mouse stays captured by gameplay.
+    // The center of the view is the visual pointer/crosshair.
     crate::game::chetars_spatial_gui::set_viewport(
         batch.width,
         batch.height,
-        screen.mouse,
+        [batch.width * 0.5, batch.height * 0.5],
     );
 }
