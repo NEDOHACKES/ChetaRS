@@ -26,24 +26,13 @@ bindings = [
 [[injection]]
 id = "render"
 kind = "HEAD"
-target = "horizon_client::game::native_hooks::Game<'_>::native_screen_render_post"
+target = "horizon_client::game::native_hooks::Game<'_>::native_gui_render_post"
 helper = "render.rs"
 bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "batch", ty = "&mut HudBatch", value = "batch" },
-  { name = "screen", ty = "&NativeScreenView<'_>", value = "screen" }
-]
-
-[[injection]]
-id = "mouse"
-kind = "HEAD"
-target = "horizon_client::game::native_hooks::Game<'_>::native_screen_mouse_button_pressed_pre"
-helper = "mouse.rs"
-bindings = [
-  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
-  { name = "screen", ty = "&NativeScreenView<'_>", value = "screen" },
-  { name = "button", ty = "i32", value = "button" },
-  { name = "canceled", ty = "&mut bool", value = "canceled" }
+  { name = "gui_hidden", ty = "bool", value = "gui_hidden" },
+  { name = "focused", ty = "bool", value = "focused" }
 ]
 
 [[injection]]
