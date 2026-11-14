@@ -33,3 +33,8 @@ The mod can also be installed from GitHub using Horizon's Add from GitHub/native
 ## Horizon version
 
 This revision is pinned to Horizon launcher `0.2.65` at commit `ec85e818d88dd530aa9a4f4b4a84e92ff163be64`.
+
+
+## 3D world menu
+
+The menu is drawn through Horizon's `native_world_submit` world-canvas hook, not as a HUD quad. Its camera-facing panel is submitted as depth-tested world geometry, so it exists in the Minecraft scene and is rendered before the first-person hand.
