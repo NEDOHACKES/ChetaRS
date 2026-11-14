@@ -12,7 +12,22 @@ fn render(
     let panel = crate::game::chetars_spatial_gui::panel(screen.mouse, batch.width, batch.height);
     let start = batch.vertices.len();
 
-    let white = game.gui.atlas.white;
+    // HudAtlas::white is crate-private in Horizon 0.2.65.
+    // Use the public atlas sprite map instead.
+    let white = game
+        .gui
+        .atlas
+        .sprites
+        .get("horizon/white")
+        .copied()
+        .unwrap_or_else(|| {
+            game.gui
+                .atlas
+                .sprites
+                .get("minecraft:white")
+                .copied()
+                .expect("Horizon white atlas sprite is missing")
+        });
     let uv = [
         [(white.u0 + white.u1) * 0.5, (white.v0 + white.v1) * 0.5];
         4
