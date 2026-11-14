@@ -52,11 +52,19 @@ pub fn is_open() -> bool {
 pub fn toggle_open() -> bool {
     let next = !is_open();
     OPEN.store(next, Ordering::Relaxed);
+    if !next {
+        DRAGGING.store(false, Ordering::Relaxed);
+        HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
+        LAST_VIEW_READY.store(false, Ordering::Relaxed);
+    }
     next
 }
 
 pub fn close() {
     OPEN.store(false, Ordering::Relaxed);
+    DRAGGING.store(false, Ordering::Relaxed);
+    HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
+    LAST_VIEW_READY.store(false, Ordering::Relaxed);
 }
 
 pub fn follow_mode() -> bool {
