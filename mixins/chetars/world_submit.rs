@@ -121,8 +121,10 @@ fn world_submit(
                  color: u32| {
         draw.push();
         // HUD font coordinates grow downward; flip only the text's local Y.
+        // Keep the label anchor in screen coordinates, then flip the glyphs'
+        // downward GUI Y axis into the panel's upward world-space Y.
+        draw.translate([x - centre_x, centre_y - y, 14.0]);
         draw.scale([1.0, -1.0, 1.0]);
-        draw.translate([x - centre_x, y - centre_y, 14.0]);
         let text = crate::text::Text::literal(text);
         let _ = game.native_world_text(draw, &text, color, None);
         draw.pop();
