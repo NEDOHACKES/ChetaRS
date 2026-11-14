@@ -121,10 +121,6 @@ pub fn set_dragging(dragging: bool) {
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
 }
 
-pub fn is_dragging() -> bool {
-    DRAGGING.load(Ordering::Relaxed)
-}
-
 pub fn set_hovered_setting(index: Option<usize>) {
     HOVERED_SETTING.store(index.map_or(u8::MAX, |i| i.min(1) as u8), Ordering::Relaxed);
 }
@@ -328,28 +324,3 @@ pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
     }
 }
 
-fn point_in_quad(point: [f32; 2], quad: [[f32; 3]; 4]) -> bool {
-    let min_x = quad.iter().map(|p| p[0]).fold(f32::INFINITY, f32::min);
-    let max_x = quad.iter().map(|p| p[0]).fold(f32::NEG_INFINITY, f32::max);
-    let min_y = quad.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min);
-    let max_y = quad.iter().map(|p| p[1]).fold(f32::NEG_INFINITY, f32::max);
-
-    point[0] >= min_x && point[0] <= max_x && point[1] >= min_y && point[1] <= max_y
-}
-
-pub fn panel_hit(mouse: [f32; 2], width: f32, height: f32) -> bool {
-    point_in_quad(mouse, panel(mouse, width, height).body)
-}
-
-pub fn button_at(mouse: [f32; 2], width: f32, height: f32) -> Option<usize> {
-    let p = panel(mouse, width, height);
-    (0..3).find(|&i| point_in_quad(mouse, p.buttons[i]))
-}
-
-pub fn button_hit(mouse: [f32; 2], width: f32, height: f32, index: usize) -> bool {
-    if index >= 3 {
-        return false;
-    }
-    let p = panel(mouse, width, height);
-    point_in_quad(mouse, p.buttons[index])
-}
