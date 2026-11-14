@@ -7,6 +7,17 @@ fn mouse_button(
 ) {
     let _ = modifiers;
 
+    // Always release the drag latch, even when gameplay was just hidden by
+    // another screen or the overlay was closed while RMB remained held.
+    if button == 1 && !pressed {
+        crate::game::chetars_spatial_gui::set_dragging(false);
+        if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
+            return;
+        }
+        *canceled = true;
+        return;
+    }
+
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
         return;
     }
@@ -14,7 +25,7 @@ fn mouse_button(
     // GLFW button 1 is the right mouse button. While held, camera rotation
     // is converted into panel movement by world_submit.rs.
     if button == 1 {
-        crate::game::chetars_spatial_gui::set_dragging(pressed);
+        crate::game::chetars_spatial_gui::set_dragging(true);
         *canceled = true;
         return;
     }
