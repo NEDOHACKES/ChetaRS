@@ -1,9 +1,11 @@
 fn render(
     game: &crate::game::Game<'_>,
     batch: &mut HudBatch,
-    _gui_hidden: bool,
-    _focused: bool,
+    gui_hidden: bool,
+    focused: bool,
 ) {
+    let _ = (gui_hidden, focused);
+
     if !game.native_playing() {
         return;
     }
