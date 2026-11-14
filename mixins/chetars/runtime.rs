@@ -4,6 +4,9 @@ pub struct Panel {
     pub body: [[f32; 3]; 4],
     pub inner: [[f32; 3]; 4],
     pub header: [[f32; 3]; 4],
+    pub sidebar: [[f32; 3]; 4],
+    pub content_frame: [[f32; 3]; 4],
+    pub white_area: [[f32; 3]; 4],
     pub buttons: [[[f32; 3]; 4]; 3],
     pub accent_left: [[f32; 3]; 4],
     pub accent_top: [[f32; 3]; 4],
@@ -60,74 +63,87 @@ pub fn select_button(index: usize) {
     }
 }
 
-fn skew_point(
-    x: f32,
-    y: f32,
-    cx: f32,
-    cy: f32,
-    tilt_x: f32,
-    tilt_y: f32,
-) -> [f32; 3] {
-    let nx = (x - cx) / cx.max(1.0);
-    let ny = (y - cy) / cy.max(1.0);
-    [x + ny * tilt_x * 22.0, y + nx * tilt_y * 16.0, 0.0]
+fn quad(x: f32, y: f32, w: f32, h: f32, z: f32) -> [[f32; 3]; 4] {
+    [
+        [x, y, z],
+        [x + w, y, z],
+        [x + w, y + h, z],
+        [x, y + h, z],
+    ]
 }
 
-fn quad(
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    cx: f32,
-    cy: f32,
-    tilt_x: f32,
-    tilt_y: f32,
-    z: f32,
-) -> [[f32; 3]; 4] {
-    let mut p = [
-        skew_point(x, y, cx, cy, tilt_x, tilt_y),
-        skew_point(x + w, y, cx, cy, tilt_x, tilt_y),
-        skew_point(x + w, y + h, cx, cy, tilt_x, tilt_y),
-        skew_point(x, y + h, cx, cy, tilt_x, tilt_y),
-    ];
-    for point in &mut p {
-        point[2] = z;
-    }
-    p
-}
-
-pub fn panel(mouse: [f32; 2], width: f32, height: f32) -> Panel {
+pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
     let cx = width * 0.5;
     let cy = height * 0.5;
-    let _ = mouse;
-    let tilt_x = 0.0;
-    let tilt_y = 0.0;
 
-    let w = (width * 0.58).clamp(360.0, 620.0);
-    let h = (height * 0.58).clamp(260.0, 420.0);
+    // A wide spatial display, inspired by Spatial-GUI's floating screen.
+    let w = (width * 0.76).clamp(500.0, 980.0);
+    let h = (height * 0.72).clamp(290.0, 580.0);
     let x = cx - w * 0.5;
     let y = cy - h * 0.5;
 
-    let shadow = quad(x + 12.0, y + 16.0, w, h, cx, cy, tilt_x, tilt_y, -10.0);
-    let body = quad(x, y, w, h, cx, cy, tilt_x, tilt_y, 0.0);
-    let inner = quad(x + 7.0, y + 7.0, w - 14.0, h - 14.0, cx, cy, tilt_x, tilt_y, 2.0);
-    let header = quad(x + 18.0, y + 18.0, w - 36.0, 54.0, cx, cy, tilt_x, tilt_y, 4.0);
+    let shadow = quad(x + 12.0, y + 16.0, w, h, -16.0);
+    let body = quad(x, y, w, h, 0.0);
+    let inner = quad(x + 6.0, y + 6.0, w - 12.0, h - 12.0, 2.0);
+    let header = quad(x + 12.0, y + 12.0, w - 24.0, 48.0, 4.0);
 
-    let bw = (w - 72.0) / 3.0;
+    let sidebar_x = x + 14.0;
+    let content_x = x + 170.0;
+    let section_y = y + 72.0;
+    let section_h = h - 86.0;
+
+    let sidebar = quad(sidebar_x, section_y, 144.0, section_h, 5.0);
+    let content_frame = quad(
+        content_x,
+        section_y,
+        w - 184.0,
+        section_h,
+        6.0,
+    );
+    // This is deliberately an empty white canvas. No inventory texture,
+    // item slots, item stacks or inventory interaction are drawn here.
+    let white_area = quad(
+        content_x + 6.0,
+        section_y + 6.0,
+        w - 196.0,
+        section_h - 12.0,
+        8.0,
+    );
+
+    let button_x = sidebar_x + 10.0;
+    let button_w = 124.0;
+    let button_h = 38.0;
+    let button_gap = 10.0;
+    let button_y = section_y + 16.0;
     let buttons = [
-        quad(x + 24.0, y + 100.0, bw, 46.0, cx, cy, tilt_x, tilt_y, 6.0),
-        quad(x + 24.0 + bw + 12.0, y + 100.0, bw, 46.0, cx, cy, tilt_x, tilt_y, 6.0),
-        quad(x + 24.0 + (bw + 12.0) * 2.0, y + 100.0, bw, 46.0, cx, cy, tilt_x, tilt_y, 6.0),
+        quad(button_x, button_y, button_w, button_h, 9.0),
+        quad(
+            button_x,
+            button_y + button_h + button_gap,
+            button_w,
+            button_h,
+            9.0,
+        ),
+        quad(
+            button_x,
+            button_y + (button_h + button_gap) * 2.0,
+            button_w,
+            button_h,
+            9.0,
+        ),
     ];
 
-    let accent_left = quad(x, y, 3.0, h, cx, cy, tilt_x, tilt_y, 8.0);
-    let accent_top = quad(x, y, w, 3.0, cx, cy, tilt_x, tilt_y, 8.0);
+    let accent_left = quad(x, y, 3.0, h, 11.0);
+    let accent_top = quad(x, y, w, 3.0, 11.0);
 
     Panel {
         shadow,
         body,
         inner,
         header,
+        sidebar,
+        content_frame,
+        white_area,
         buttons,
         accent_left,
         accent_top,
@@ -143,14 +159,13 @@ fn point_in_quad(point: [f32; 2], quad: [[f32; 3]; 4]) -> bool {
     point[0] >= min_x && point[0] <= max_x && point[1] >= min_y && point[1] <= max_y
 }
 
-pub fn button_at(mouse: [f32; 2], width: f32, height: f32) -> usize {
+pub fn panel_hit(mouse: [f32; 2], width: f32, height: f32) -> bool {
+    point_in_quad(mouse, panel(mouse, width, height).body)
+}
+
+pub fn button_at(mouse: [f32; 2], width: f32, height: f32) -> Option<usize> {
     let p = panel(mouse, width, height);
-    for i in 0..3 {
-        if point_in_quad(mouse, p.buttons[i]) {
-            return i;
-        }
-    }
-    0
+    (0..3).find(|&i| point_in_quad(mouse, p.buttons[i]))
 }
 
 pub fn button_hit(mouse: [f32; 2], width: f32, height: f32, index: usize) -> bool {
