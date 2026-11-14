@@ -12,7 +12,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 - The overlay stays non-modal: WASD, jump, mouse-look, attacks and normal gameplay input remain active.
 - The panel uses the active camera orientation and fixed world-space sizing. It does not create a `Screen::Mod`, so it does not release the mouse or stop movement.
 - Press **Escape** to hide the overlay (the vanilla pause menu may also open).
-- Use **1**, **2** or **3** to select HOME, PROFILE or SETTINGS while the overlay is visible.
+- Use **Left Arrow** and **Right Arrow** to switch tabs while the overlay is visible.
 
 ## Visual reference
 
