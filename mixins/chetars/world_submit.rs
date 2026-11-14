@@ -152,7 +152,7 @@ fn world_submit(
         draw,
         panel.body[3][0] + 22.0,
         panel.body[3][1] - 22.0,
-        "WASD MOVE  MOUSE LOOK  1-3 TABS  F6 HIDE",
+        "WASD MOVE  MOUSE LOOK  ARROWS TABS  F6 HIDE",
         0xFFCCCCCC,
     );
 
