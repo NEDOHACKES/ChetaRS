@@ -1,40 +1,27 @@
 # ChetaRS Spatial GUI
 
-A client-side native Horizon mod written in Rust.
+A client-side native Rust mod for Horizon launcher 0.2.65.
 
 ## What it does
 
-- Opens with F6.
-- Shows a floating 3D-style panel over the world.
-- Uses Horizon's native screen API and GUI depth buffer.
-- Adds perspective/skew based on the mouse position.
-- Has three clickable menu buttons.
+- Opens and closes with F6.
+- Draws a floating panel as actual camera-facing geometry in the Minecraft world.
+- Uses Horizon's native `world_submit` / world-canvas rendering path, not the 2D HUD renderer.
+- The panel uses world depth testing and is drawn before the first-person hand, so nearby world geometry can occlude it.
+- Keeps three selectable buttons: HOME, PROFILE and SETTINGS.
 - Escape closes the menu.
-- The panel is intentionally visual-only; it does not change gameplay.
+- The current buttons are visual/navigation placeholders; they do not change gameplay yet.
 
-## Horizon
+## Horizon compatibility
 
-This targets Horizon main at:
-3cfcd1e548b395dc903a84e24249ce3d32c5b12b
+Pinned to Horizon commit:
 
-Native mods are full native code and are not sandboxed. Read the source before installing/trusting it.
+`9f42064c11efe7ef3e5ed2baad7ddc2a3b36eea0`
 
-## Development
+The menu's world-canvas hook is available in this source revision. The launcher compiles native mods against the Horizon source revision used by the instance.
 
-The official Horizon native-mod workflow uses horizon-mixins:
+## Build
 
-    horizon-launcher native-build ./ --trust-native-code
+Use Horizon's Native Mods build screen and select the Dev build profile, or run the native build command supplied by your Horizon installation.
 
-For the fastest iteration, use Horizon's Dev native build profile.
-
-The mod can also be installed from GitHub using Horizon's Add from GitHub/native-mod workflow once a release is published.
-
-
-## Horizon version
-
-This revision is pinned to Horizon launcher `0.2.65` at commit `ec85e818d88dd530aa9a4f4b4a84e92ff163be64`.
-
-
-## 3D world menu
-
-The menu is drawn through Horizon's `native_world_submit` world-canvas hook, not as a HUD quad. Its camera-facing panel is submitted as depth-tested world geometry, so it exists in the Minecraft scene and is rendered before the first-person hand.
+Native mods execute as native code with the permissions of the game process. Review the source before installing or trusting it.
