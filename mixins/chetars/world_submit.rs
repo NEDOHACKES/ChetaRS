@@ -2,7 +2,7 @@ fn world_submit(
     game: &crate::game::Game<'_>,
     draw: &mut NativeWorldDraw,
 ) {
-    if game.native_mod_screen() != Some("chetars_spatial_gui") {
+    if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
         return;
     }
 
