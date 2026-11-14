@@ -32,11 +32,7 @@ fn skew_point(
 ) -> [f32; 3] {
     let nx = (x - cx) / cx.max(1.0);
     let ny = (y - cy) / cy.max(1.0);
-
-    // A small perspective-like shear. Z is kept separate for the GUI depth pass.
-    let sx = x + ny * tilt_x * 22.0;
-    let sy = y + nx * tilt_y * 16.0;
-    [sx, sy, 0.0]
+    [x + ny * tilt_x * 22.0, y + nx * tilt_y * 16.0, 0.0]
 }
 
 fn quad(
@@ -108,8 +104,8 @@ fn point_in_quad(point: [f32; 2], quad: [[f32; 3]; 4]) -> bool {
     point[0] >= min_x && point[0] <= max_x && point[1] >= min_y && point[1] <= max_y
 }
 
-pub fn button_at(mouse: [f32; 2]) -> usize {
-    let p = panel(mouse, 1000.0, 600.0);
+pub fn button_at(mouse: [f32; 2], width: f32, height: f32) -> usize {
+    let p = panel(mouse, width, height);
     for i in 0..3 {
         if point_in_quad(mouse, p.buttons[i]) {
             return i;
@@ -118,10 +114,10 @@ pub fn button_at(mouse: [f32; 2]) -> usize {
     0
 }
 
-pub fn button_hit(mouse: [f32; 2], index: usize) -> bool {
+pub fn button_hit(mouse: [f32; 2], width: f32, height: f32, index: usize) -> bool {
     if index >= 3 {
         return false;
     }
-    let p = panel(mouse, 1000.0, 600.0);
+    let p = panel(mouse, width, height);
     point_in_quad(mouse, p.buttons[index])
 }
