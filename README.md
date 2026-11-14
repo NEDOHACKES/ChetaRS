@@ -28,3 +28,8 @@ The official Horizon native-mod workflow uses horizon-mixins:
 For the fastest iteration, use Horizon's Dev native build profile.
 
 The mod can also be installed from GitHub using Horizon's Add from GitHub/native-mod workflow once a release is published.
+
+
+## Horizon version
+
+This revision is pinned to Horizon launcher `0.2.65` at commit `ec85e818d88dd530aa9a4f4b4a84e92ff163be64`.
