@@ -6,10 +6,10 @@ fn world_submit(
         return;
     }
 
-    let Some(camera) = game.native_camera() else {
-        return;
-    };
-
+    // Do not call game.native_camera() here: source-mixin mods are not
+    // necessarily registered as mod_api::Hooks, so that accessor may be None.
+    // NativeWorldDraw already starts in the current frame's camera-relative
+    // world space, and camera_orientation() gives the view rotation.
     let (width, height, mouse) = crate::game::chetars_spatial_gui::viewport();
     if width <= 0.0 || height <= 0.0 {
         return;
@@ -22,12 +22,10 @@ fn world_submit(
     // Place the display in front of the camera, as a Spatial-GUI-style
     // floating screen. Its size follows the current vertical FOV.
     let distance = 2.25f32;
-    let fov = camera
-        .fov_degrees
-        .to_radians()
-        .clamp(20.0f32.to_radians(), 150.0f32.to_radians());
-    let world_per_pixel =
-        (2.0 * distance * (fov * 0.5).tan() / height).clamp(0.0005, 0.05);
+    // Keep the display a consistent world-space width across window sizes.
+    // The vanilla FOV is intentionally not required for this calculation.
+    let world_per_pixel = (3.6 / panel.body[1][0].abs().max(width * 0.5))
+        .clamp(0.001, 0.02);
 
     let (yaw, pitch, roll) =
         game.camera_orientation().to_euler(glam::EulerRot::YXZ);
@@ -37,7 +35,7 @@ fn world_submit(
     draw.rotate_about([1.0, 0.0, 0.0], pitch.to_degrees(), [0.0; 3]);
     draw.rotate_about([0.0, 0.0, 1.0], roll.to_degrees(), [0.0; 3]);
     draw.translate([0.0, 0.0, -distance]);
-    draw.scale([world_per_pixel, world_per_pixel, 0.006]);
+    draw.scale([world_per_pixel, world_per_pixel, world_per_pixel]);
 
     let paint = |game: &crate::game::Game<'_>,
                  draw: &mut NativeWorldDraw,
