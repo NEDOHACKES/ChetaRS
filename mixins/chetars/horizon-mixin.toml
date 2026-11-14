@@ -44,3 +44,16 @@ bindings = [
   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "draw", ty = "&mut NativeWorldDraw", value = "draw" }
 ]
+
+[[injection]]
+id = "mouse-button"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_mouse_button_pre"
+helper = "mouse_button.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "button", ty = "i32", value = "button" },
+  { name = "pressed", ty = "bool", value = "pressed" },
+  { name = "modifiers", ty = "u32", value = "modifiers" },
+  { name = "canceled", ty = "&mut bool", value = "canceled" }
+]
