@@ -24,8 +24,8 @@ fn world_submit(
     let distance = 2.25f32;
     // Keep the display a consistent world-space width across window sizes.
     // The vanilla FOV is intentionally not required for this calculation.
-    let world_per_pixel = (3.6 / panel.body[1][0].abs().max(width * 0.5))
-        .clamp(0.001, 0.02);
+    let panel_width_pixels = (panel.body[1][0] - panel.body[0][0]).abs().max(1.0);
+    let world_per_pixel = (3.6 / panel_width_pixels).clamp(0.001, 0.02);
 
     let (yaw, pitch, roll) =
         game.camera_orientation().to_euler(glam::EulerRot::YXZ);
