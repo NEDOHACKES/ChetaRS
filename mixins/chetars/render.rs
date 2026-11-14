@@ -4,14 +4,18 @@ fn render(
     gui_hidden: bool,
     focused: bool,
 ) {
-    let _ = (gui_hidden, focused);
+    let _ = gui_hidden;
+
+    if !focused {
+        crate::game::chetars_spatial_gui::set_dragging(false);
+    }
 
     if !game.native_playing() {
         return;
     }
 
-    // No screen is opened: the actual mouse stays captured by gameplay.
-    // The center of the view is the visual pointer/crosshair.
+    // The overlay is non-modal. The game keeps its captured mouse for
+    // camera-look; the center of the view is used as the world-ray pointer.
     crate::game::chetars_spatial_gui::set_viewport(
         batch.width,
         batch.height,
