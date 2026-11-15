@@ -1,8 +1,12 @@
-fn draw_panel(
+fn world_submit(
     game: &crate::game::Game<'_>,
     draw: &mut NativeWorldDraw,
-    panel_index: usize,
 ) {
+    // Keep one private entry-point per Horizon Mixins helper. The panel
+    // renderer is a local closure so it remains part of this injection.
+    let draw_panel = |game: &crate::game::Game<'_>,
+                      draw: &mut NativeWorldDraw,
+                      panel_index: usize| {
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open()
         || !crate::game::chetars_spatial_gui::panel_exists(panel_index)
     {
@@ -530,12 +534,9 @@ fn draw_panel(
     draw_face(game, draw);
     draw.pop();
     draw.pop();
-}
+    };
 
-fn world_submit(
-    game: &crate::game::Game<'_>,
-    draw: &mut NativeWorldDraw,
-) {
+
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open()
         || crate::game::chetars_spatial_gui::is_2d_mode()
     {
@@ -555,4 +556,5 @@ fn world_submit(
     crate::game::chetars_spatial_gui::load_panel(
         crate::game::chetars_spatial_gui::selected_panel() as usize,
     );
+
 }
