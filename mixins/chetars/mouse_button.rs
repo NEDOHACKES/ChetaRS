@@ -7,6 +7,27 @@ fn mouse_button(
 ) {
     let _ = modifiers;
 
+    // Resize operations end on the matching mouse release even if the pointer
+    // has already moved outside the panel.
+    if button == 0 && !pressed && crate::game::chetars_spatial_gui::is_2d_resizing() {
+        crate::game::chetars_spatial_gui::end_2d_resize();
+        *canceled = true;
+        return;
+    }
+    if button == 0 && !pressed
+        && (0..crate::game::chetars_spatial_gui::max_panels())
+            .any(|index| crate::game::chetars_spatial_gui::is_3d_resizing_for(index))
+    {
+        crate::game::chetars_spatial_gui::end_3d_resize();
+        *canceled = true;
+        return;
+    }
+
+    // Keep the system pointer released whenever the 2D workspace receives input.
+    if crate::game::chetars_spatial_gui::is_2d_mode() {
+        game.capture(false);
+    }
+
     // A captured RMB drag belongs to the panel selected at the moment it began.
     if button == 1 && !pressed {
         let was_dragging = crate::game::chetars_spatial_gui::is_dragging();
@@ -52,6 +73,30 @@ fn mouse_button(
 
     if button != 0 || !pressed {
         return;
+    }
+
+    // The dotted upper-left corner starts a resize gesture. In 3D, moving the
+    // captured mouse changes view yaw/pitch; in 2D, the released system cursor
+    // changes the window size directly.
+    if crate::game::chetars_spatial_gui::is_2d_mode()
+        && crate::game::chetars_spatial_gui::hovered_mode_action() == 11
+    {
+        let (_, _, pointer) = crate::game::chetars_spatial_gui::viewport();
+        crate::game::chetars_spatial_gui::begin_2d_resize(pointer);
+        *canceled = true;
+        return;
+    }
+
+    if !crate::game::chetars_spatial_gui::is_2d_mode() {
+        if let Some(index) = crate::game::chetars_spatial_gui::hovered_resize_panel() {
+            crate::game::chetars_spatial_gui::set_selected_panel(index);
+            crate::game::chetars_spatial_gui::load_panel(index);
+            let (yaw, pitch, _) = game.camera_orientation().to_euler(glam::EulerRot::YXZ);
+            crate::game::chetars_spatial_gui::begin_3d_resize(index, yaw, pitch);
+            crate::game::chetars_spatial_gui::save_panel(index);
+            *canceled = true;
+            return;
+        }
     }
 
     let Some(index) = crate::game::chetars_spatial_gui::hovered_panel() else {
@@ -100,6 +145,8 @@ fn mouse_button(
             *canceled = true;
         }
         4 => {
+            crate::game::chetars_spatial_gui::end_2d_resize();
+            crate::game::chetars_spatial_gui::end_3d_resize();
             let now_2d = crate::game::chetars_spatial_gui::toggle_2d_mode();
             // A 2D window needs a visible system cursor; returning to 3D restores mouse-look.
             game.capture(!now_2d);
