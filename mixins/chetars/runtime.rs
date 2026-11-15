@@ -86,6 +86,7 @@ static PANEL_DISTANCES: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(2.25f3
 
 static SELECTED_PANEL: AtomicU8 = AtomicU8::new(0);
 static HOVERED_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
+static HOVERED_PANEL_DEPTH: AtomicU32 = AtomicU32::new(f32::INFINITY.to_bits());
 static DRAG_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
 static HOVERED_ADD: AtomicBool = AtomicBool::new(false);
 static MODE_DROPDOWN_OPEN: AtomicBool = AtomicBool::new(false);
@@ -537,8 +538,30 @@ pub fn set_hovered_panel_if_empty(index: usize) -> bool {
     ).is_ok()
 }
 
+pub fn set_hovered_panel_if_closer(index: usize, depth: f32) -> bool {
+    if index >= MAX_PANELS || !depth.is_finite() || depth <= 0.0 {
+        return false;
+    }
+    loop {
+        let previous = HOVERED_PANEL_DEPTH.load(Ordering::Relaxed);
+        if depth >= f32::from_bits(previous) {
+            return false;
+        }
+        if HOVERED_PANEL_DEPTH.compare_exchange(
+            previous,
+            depth.to_bits(),
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ).is_ok() {
+            HOVERED_PANEL.store(index as u8, Ordering::Relaxed);
+            return true;
+        }
+    }
+}
+
 pub fn clear_hover_state() {
     HOVERED_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    HOVERED_PANEL_DEPTH.store(f32::INFINITY.to_bits(), Ordering::Relaxed);
     HOVERED_ADD.store(false, Ordering::Relaxed);
     HOVERED_MODE_ACTION.store(0, Ordering::Relaxed);
     HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
