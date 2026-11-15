@@ -18,12 +18,16 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
     }
 
     if key == "key.keyboard.f7" {
+        crate::game::chetars_spatial_gui::end_2d_resize();
+        crate::game::chetars_spatial_gui::end_3d_resize();
         let now_2d = crate::game::chetars_spatial_gui::toggle_2d_mode();
         game.capture(!now_2d);
         return;
     }
 
     if key == "key.keyboard.escape" {
+        crate::game::chetars_spatial_gui::end_2d_resize();
+        crate::game::chetars_spatial_gui::end_3d_resize();
         if crate::game::chetars_spatial_gui::dropdown_open() {
             crate::game::chetars_spatial_gui::close_dropdown();
         } else {
