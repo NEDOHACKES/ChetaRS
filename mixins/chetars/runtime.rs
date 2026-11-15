@@ -618,8 +618,51 @@ pub fn set_2d_pointer_over(over: bool) {
     TWO_D_POINTER_OVER.store(over, Ordering::Relaxed);
 }
 
+pub fn set_2d_mode(enabled: bool) {
+    TWO_D_MODE.store(enabled, Ordering::Relaxed);
+    if !enabled {
+        TWO_D_POINTER_OVER.store(false, Ordering::Relaxed);
+    }
+}
+
 pub fn two_d_pointer_over() -> bool {
     TWO_D_POINTER_OVER.load(Ordering::Relaxed)
+}
+
+/// Remove a panel while keeping at least one panel alive. The slot is reusable
+/// by add_panel(), so the hard limit remains ten active panels.
+pub fn remove_panel(index: usize) -> bool {
+    if index >= MAX_PANELS || !panel_exists(index) || panel_count() <= 1 {
+        return false;
+    }
+
+    PANEL_ACTIVE[index].store(false, Ordering::Relaxed);
+    PANEL_FOLLOW[index].store(false, Ordering::Relaxed);
+    PANEL_FOLLOW_CHANGED[index].store(false, Ordering::Relaxed);
+    PANEL_ANCHOR_READY[index].store(false, Ordering::Relaxed);
+    PANEL_DISTANCE_DIRTY[index].store(false, Ordering::Relaxed);
+    PANEL_X[index].store(0.0f64.to_bits(), Ordering::Relaxed);
+    PANEL_Y[index].store(0.0f64.to_bits(), Ordering::Relaxed);
+    PANEL_Z[index].store(0.0f64.to_bits(), Ordering::Relaxed);
+    PANEL_QX[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_QY[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_QZ[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_QW[index].store(1.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_ORBIT_YAW[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_ORBIT_PITCH[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_DISTANCES[index].store(2.25f32.to_bits(), Ordering::Relaxed);
+
+    let next = (0..MAX_PANELS)
+        .find(|candidate| panel_exists(*candidate))
+        .unwrap_or(0);
+    SELECTED_PANEL.store(next as u8, Ordering::Relaxed);
+    DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    DRAGGING.store(false, Ordering::Relaxed);
+    MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
+    HOVERED_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    HOVERED_ADD.store(false, Ordering::Relaxed);
+    HOVERED_MODE_ACTION.store(0, Ordering::Relaxed);
+    true
 }
 
 pub fn add_panel() -> Option<usize> {
