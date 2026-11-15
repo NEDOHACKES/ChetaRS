@@ -22,11 +22,6 @@ fn render(
         return;
     }
 
-    // 2D mode is a real screen-space interaction mode. Release the native
-    // pointer capture every frame so the OS cursor remains movable and the
-    // current game.cursor position can be used for hit testing.
-    game.capture(false);
-
     let atlas = &game.gui.atlas;
     let width = batch.width;
     let height = batch.height;
