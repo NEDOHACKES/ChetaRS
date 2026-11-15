@@ -10,6 +10,7 @@ fn render(
         crate::game::chetars_spatial_gui::set_dragging(false);
     }
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
+        crate::game::chetars_spatial_gui::set_2d_pointer_over(false);
         return;
     }
 
@@ -17,6 +18,7 @@ fn render(
     crate::game::chetars_spatial_gui::set_viewport(batch.width, batch.height, pointer);
 
     if !crate::game::chetars_spatial_gui::is_2d_mode() {
+        crate::game::chetars_spatial_gui::set_2d_pointer_over(false);
         return;
     }
 
@@ -27,6 +29,10 @@ fn render(
     let panel_h = 420.0f32.min((height - 32.0).max(260.0));
     let x = (width - panel_w) * 0.5;
     let y = (height - panel_h) * 0.5;
+    crate::game::chetars_spatial_gui::set_2d_pointer_over(
+        pointer[0] >= x && pointer[0] <= x + panel_w
+            && pointer[1] >= y && pointer[1] <= y + panel_h
+    );
     let selected = crate::game::chetars_spatial_gui::selected_panel() as usize;
     crate::game::chetars_spatial_gui::set_hovered_panel(selected);
     crate::game::chetars_spatial_gui::set_hovered_add(false);
