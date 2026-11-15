@@ -1,6 +1,6 @@
 [mod]
 id = "chetars_spatial_gui"
-version = "0.5.1"
+version = "0.5.2"
 priority = 100
 
 [compatibility]
