@@ -121,6 +121,10 @@ pub fn set_dragging(dragging: bool) {
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
 }
 
+pub fn is_dragging() -> bool {
+    DRAGGING.load(Ordering::Relaxed)
+}
+
 pub fn set_hovered_setting(index: Option<usize>) {
     HOVERED_SETTING.store(index.map_or(u8::MAX, |i| i.min(1) as u8), Ordering::Relaxed);
 }
