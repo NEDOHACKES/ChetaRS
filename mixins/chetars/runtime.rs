@@ -43,7 +43,21 @@ static ANCHOR_QW: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 static ORBIT_YAW: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ORBIT_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static PANEL_DISTANCE: AtomicU32 = AtomicU32::new(2.25f32.to_bits());
+static PANEL_SCALE: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 static DISTANCE_DIRTY: AtomicBool = AtomicBool::new(false);
+
+// Corner resize is separate from title-bar orbit drag.
+static RESIZE_PANEL: AtomicU8 = AtomicU8::new(10);
+static RESIZE_READY: AtomicBool = AtomicBool::new(false);
+static RESIZE_LAST_YAW: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
+static RESIZE_LAST_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
+static HOVERED_RESIZE_PANEL: AtomicU8 = AtomicU8::new(10);
+
+// 2D screen size and pointer-drag state.
+static TWO_D_SCALE: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
+static TWO_D_RESIZING: AtomicBool = AtomicBool::new(false);
+static TWO_D_RESIZE_LAST_X: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
+static TWO_D_RESIZE_LAST_Y: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static DRAG_ORBIT_READY: AtomicBool = AtomicBool::new(false);
 static LAST_YAW: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static LAST_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
@@ -83,6 +97,7 @@ static PANEL_QW: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(1.0f32.to_bit
 static PANEL_ORBIT_YAW: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
 static PANEL_ORBIT_PITCH: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
 static PANEL_DISTANCES: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(2.25f32.to_bits()) }; MAX_PANELS];
+static PANEL_SCALES: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(1.0f32.to_bits()) }; MAX_PANELS];
 
 static SELECTED_PANEL: AtomicU8 = AtomicU8::new(0);
 static HOVERED_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
@@ -113,6 +128,9 @@ pub fn toggle_open() -> bool {
         HOVERED_DISTANCE.store(u8::MAX, Ordering::Relaxed);
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
         DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
+        RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
+        RESIZE_READY.store(false, Ordering::Relaxed);
+        TWO_D_RESIZING.store(false, Ordering::Relaxed);
     }
     next
 }
@@ -127,6 +145,9 @@ pub fn close() {
     HOVERED_DISTANCE.store(u8::MAX, Ordering::Relaxed);
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
     DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
+    RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    RESIZE_READY.store(false, Ordering::Relaxed);
+    TWO_D_RESIZING.store(false, Ordering::Relaxed);
 }
 
 pub fn follow_mode() -> bool {
@@ -206,6 +227,113 @@ pub fn set_drag_hovered(hovered: bool) {
 
 pub fn can_drag_from_header() -> bool {
     DRAG_HOVERED.load(Ordering::Relaxed)
+}
+
+pub fn set_hovered_resize_panel(index: Option<usize>) {
+    HOVERED_RESIZE_PANEL.store(index.map_or(NO_PANEL, |i| i.min(MAX_PANELS - 1) as u8), Ordering::Relaxed);
+}
+
+pub fn hovered_resize_panel() -> Option<usize> {
+    let value = HOVERED_RESIZE_PANEL.load(Ordering::Relaxed);
+    (value < MAX_PANELS as u8).then_some(value as usize)
+}
+
+pub fn begin_3d_resize(index: usize, yaw: f32, pitch: f32) {
+    if index >= MAX_PANELS || !panel_exists(index) {
+        return;
+    }
+    SELECTED_PANEL.store(index as u8, Ordering::Relaxed);
+    RESIZE_PANEL.store(index as u8, Ordering::Relaxed);
+    RESIZE_READY.store(true, Ordering::Relaxed);
+    RESIZE_LAST_YAW.store(yaw.to_bits(), Ordering::Relaxed);
+    RESIZE_LAST_PITCH.store(pitch.to_bits(), Ordering::Relaxed);
+    DRAGGING.store(false, Ordering::Relaxed);
+    DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    LAST_VIEW_READY.store(false, Ordering::Relaxed);
+    DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
+}
+
+pub fn end_3d_resize() {
+    RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    RESIZE_READY.store(false, Ordering::Relaxed);
+}
+
+pub fn is_3d_resizing_for(index: usize) -> bool {
+    RESIZE_PANEL.load(Ordering::Relaxed) == index as u8
+}
+
+pub fn update_3d_resize(index: usize, yaw: f32, pitch: f32) {
+    if !is_3d_resizing_for(index) || !yaw.is_finite() || !pitch.is_finite() {
+        return;
+    }
+    if !RESIZE_READY.load(Ordering::Relaxed) {
+        RESIZE_LAST_YAW.store(yaw.to_bits(), Ordering::Relaxed);
+        RESIZE_LAST_PITCH.store(pitch.to_bits(), Ordering::Relaxed);
+        RESIZE_READY.store(true, Ordering::Relaxed);
+        return;
+    }
+
+    let last_yaw = f32::from_bits(RESIZE_LAST_YAW.load(Ordering::Relaxed));
+    let last_pitch = f32::from_bits(RESIZE_LAST_PITCH.load(Ordering::Relaxed));
+    let mut yaw_delta = yaw - last_yaw;
+    if yaw_delta > std::f32::consts::PI {
+        yaw_delta -= std::f32::consts::TAU;
+    } else if yaw_delta < -std::f32::consts::PI {
+        yaw_delta += std::f32::consts::TAU;
+    }
+    let pitch_delta = pitch - last_pitch;
+    // Vertical mouse motion is the main resize axis; horizontal motion adds
+    // a smaller contribution so the corner remains usable at the pitch limit.
+    let delta = -pitch_delta * 1.6 + yaw_delta * 0.25;
+    if delta.is_finite() && delta.abs() > 0.00001 {
+        set_panel_scale(panel_scale() + delta);
+    }
+    RESIZE_LAST_YAW.store(yaw.to_bits(), Ordering::Relaxed);
+    RESIZE_LAST_PITCH.store(pitch.to_bits(), Ordering::Relaxed);
+}
+
+pub fn panel_scale() -> f32 {
+    f32::from_bits(PANEL_SCALE.load(Ordering::Relaxed)).clamp(0.45, 2.4)
+}
+
+pub fn set_panel_scale(scale: f32) {
+    if scale.is_finite() {
+        PANEL_SCALE.store(scale.clamp(0.45, 2.4).to_bits(), Ordering::Relaxed);
+    }
+}
+
+pub fn two_d_scale() -> f32 {
+    f32::from_bits(TWO_D_SCALE.load(Ordering::Relaxed)).clamp(0.55, 1.8)
+}
+
+pub fn begin_2d_resize(pointer: [f32; 2]) {
+    TWO_D_RESIZE_LAST_X.store(pointer[0].to_bits(), Ordering::Relaxed);
+    TWO_D_RESIZE_LAST_Y.store(pointer[1].to_bits(), Ordering::Relaxed);
+    TWO_D_RESIZING.store(true, Ordering::Relaxed);
+    RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
+}
+
+pub fn end_2d_resize() {
+    TWO_D_RESIZING.store(false, Ordering::Relaxed);
+}
+
+pub fn is_2d_resizing() -> bool {
+    TWO_D_RESIZING.load(Ordering::Relaxed)
+}
+
+pub fn update_2d_resize(pointer: [f32; 2]) {
+    if !is_2d_resizing() || !pointer[0].is_finite() || !pointer[1].is_finite() {
+        return;
+    }
+    let last_x = f32::from_bits(TWO_D_RESIZE_LAST_X.load(Ordering::Relaxed));
+    let last_y = f32::from_bits(TWO_D_RESIZE_LAST_Y.load(Ordering::Relaxed));
+    let delta = ((last_x - pointer[0]) + (last_y - pointer[1])) * 0.0025;
+    if delta.is_finite() && delta.abs() > 0.00001 {
+        let next = (two_d_scale() + delta).clamp(0.55, 1.8);
+        TWO_D_SCALE.store(next.to_bits(), Ordering::Relaxed);
+    }
+    TWO_D_RESIZE_LAST_X.store(pointer[0].to_bits(), Ordering::Relaxed);
+    TWO_D_RESIZE_LAST_Y.store(pointer[1].to_bits(), Ordering::Relaxed);
 }
 
 pub fn set_hovered_setting(index: Option<usize>) {
@@ -569,6 +697,7 @@ pub fn clear_hover_state() {
     HOVERED_NAVIGATION.store(u8::MAX, Ordering::Relaxed);
     HOVERED_DISTANCE.store(u8::MAX, Ordering::Relaxed);
     DRAG_HOVERED.store(false, Ordering::Relaxed);
+    HOVERED_RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
 }
 
 pub fn set_hovered_add(value: bool) {
@@ -580,7 +709,7 @@ pub fn hovered_add() -> bool {
 }
 
 pub fn set_hovered_mode_action(action: u8) {
-    HOVERED_MODE_ACTION.store(action.min(10), Ordering::Relaxed);
+    HOVERED_MODE_ACTION.store(action.min(11), Ordering::Relaxed);
 }
 
 pub fn hovered_mode_action() -> u8 {
@@ -651,6 +780,7 @@ pub fn remove_panel(index: usize) -> bool {
     PANEL_ORBIT_YAW[index].store(0.0f32.to_bits(), Ordering::Relaxed);
     PANEL_ORBIT_PITCH[index].store(0.0f32.to_bits(), Ordering::Relaxed);
     PANEL_DISTANCES[index].store(2.25f32.to_bits(), Ordering::Relaxed);
+    PANEL_SCALES[index].store(1.0f32.to_bits(), Ordering::Relaxed);
 
     let next = (0..MAX_PANELS)
         .find(|candidate| panel_exists(*candidate))
@@ -684,6 +814,7 @@ pub fn add_panel() -> Option<usize> {
     PANEL_ORBIT_YAW[index].store(0.0f32.to_bits(), Ordering::Relaxed);
     PANEL_ORBIT_PITCH[index].store(0.0f32.to_bits(), Ordering::Relaxed);
     PANEL_DISTANCES[index].store(2.25f32.to_bits(), Ordering::Relaxed);
+    PANEL_SCALES[index].store(1.0f32.to_bits(), Ordering::Relaxed);
     SELECTED_PANEL.store(index as u8, Ordering::Relaxed);
     MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
     Some(index)
@@ -705,6 +836,7 @@ pub fn load_panel(index: usize) {
     ORBIT_YAW.store(PANEL_ORBIT_YAW[index].load(Ordering::Relaxed), Ordering::Relaxed);
     ORBIT_PITCH.store(PANEL_ORBIT_PITCH[index].load(Ordering::Relaxed), Ordering::Relaxed);
     PANEL_DISTANCE.store(PANEL_DISTANCES[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_SCALE.store(PANEL_SCALES[index].load(Ordering::Relaxed), Ordering::Relaxed);
     DRAGGING.store(DRAG_PANEL.load(Ordering::Relaxed) == index as u8, Ordering::Relaxed);
 }
 
@@ -724,4 +856,5 @@ pub fn save_panel(index: usize) {
     PANEL_ORBIT_YAW[index].store(ORBIT_YAW.load(Ordering::Relaxed), Ordering::Relaxed);
     PANEL_ORBIT_PITCH[index].store(ORBIT_PITCH.load(Ordering::Relaxed), Ordering::Relaxed);
     PANEL_DISTANCES[index].store(PANEL_DISTANCE.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_SCALES[index].store(PANEL_SCALE.load(Ordering::Relaxed), Ordering::Relaxed);
 }
