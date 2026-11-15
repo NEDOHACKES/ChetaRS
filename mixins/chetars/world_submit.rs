@@ -210,6 +210,9 @@ fn world_submit(
     let is_primary_hit = hit_inside
         && crate::game::chetars_spatial_gui::set_hovered_panel_if_closer(panel_index, hit_depth);
     if is_primary_hit {
+        // If a nearer panel takes over the pointer, discard the previous
+        // panel's resize hot zone before evaluating this face.
+        crate::game::chetars_spatial_gui::set_hovered_resize_panel(None);
         if let Some([screen_x, screen_y]) = hit {
             let plus_x = panel.header[1][0] - 72.0;
             let close_x = plus_x + 40.0;
