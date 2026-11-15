@@ -76,7 +76,9 @@ fn mouse_button(
             *canceled = true;
         }
         4 => {
-            crate::game::chetars_spatial_gui::toggle_2d_mode();
+            let now_2d = crate::game::chetars_spatial_gui::toggle_2d_mode();
+            // A 2D window needs a visible system cursor; returning to 3D restores mouse-look.
+            game.capture(!now_2d);
             *canceled = true;
         }
         5 => {
