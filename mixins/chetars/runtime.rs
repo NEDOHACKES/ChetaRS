@@ -52,6 +52,40 @@ static LAST_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static PIN_PROGRESS: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 static FOLLOW_PROGRESS: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 
+const MAX_PANELS: usize = 10;
+const NO_PANEL: u8 = MAX_PANELS as u8;
+
+// The existing scalar atomics above are the working copy for one panel.
+// The arrays below keep each panel's placement and mode independent.
+static PANEL_ACTIVE: [AtomicBool; MAX_PANELS] = [
+    AtomicBool::new(true),
+    const { AtomicBool::new(false) }; 9
+];
+static PANEL_FOLLOW: [AtomicBool; MAX_PANELS] = [const { AtomicBool::new(false) }; MAX_PANELS];
+static PANEL_FOLLOW_CHANGED: [AtomicBool; MAX_PANELS] = [const { AtomicBool::new(false) }; MAX_PANELS];
+static PANEL_ANCHOR_READY: [AtomicBool; MAX_PANELS] = [const { AtomicBool::new(false) }; MAX_PANELS];
+static PANEL_DISTANCE_DIRTY: [AtomicBool; MAX_PANELS] = [const { AtomicBool::new(false) }; MAX_PANELS];
+static PANEL_X: [AtomicU64; MAX_PANELS] = [const { AtomicU64::new(0.0f64.to_bits()) }; MAX_PANELS];
+static PANEL_Y: [AtomicU64; MAX_PANELS] = [const { AtomicU64::new(0.0f64.to_bits()) }; MAX_PANELS];
+static PANEL_Z: [AtomicU64; MAX_PANELS] = [const { AtomicU64::new(0.0f64.to_bits()) }; MAX_PANELS];
+static PANEL_QX: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
+static PANEL_QY: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
+static PANEL_QZ: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
+static PANEL_QW: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(1.0f32.to_bits()) }; MAX_PANELS];
+static PANEL_ORBIT_YAW: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
+static PANEL_ORBIT_PITCH: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
+static PANEL_DISTANCE: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(2.25f32.to_bits()) }; MAX_PANELS];
+
+static SELECTED_PANEL: AtomicU8 = AtomicU8::new(0);
+static HOVERED_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
+static DRAG_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
+static HOVERED_ADD: AtomicBool = AtomicBool::new(false);
+static MODE_DROPDOWN_OPEN: AtomicBool = AtomicBool::new(false);
+static TWO_D_MODE: AtomicBool = AtomicBool::new(false);
+static HOVERED_MODE_ACTION: AtomicU8 = AtomicU8::new(0);
+// Hover actions: 0 none, 1 mode row, 2 Follow, 3 Keep, 4 2D mode,
+// 5 distance minus, 6 distance plus, 7 add panel.
+
 pub fn is_open() -> bool {
     OPEN.load(Ordering::Relaxed)
 }
@@ -138,6 +172,11 @@ pub fn advance_switch_animations() -> [f32; 2] {
 
 pub fn set_dragging(dragging: bool) {
     DRAGGING.store(dragging, Ordering::Relaxed);
+    if dragging {
+        DRAG_PANEL.store(selected_panel().min((MAX_PANELS - 1) as u8), Ordering::Relaxed);
+    } else {
+        DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    }
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
     DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
 }
@@ -430,3 +469,147 @@ pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
     }
 }
 
+
+pub fn max_panels() -> usize { MAX_PANELS }
+
+pub fn panel_exists(index: usize) -> bool {
+    index < MAX_PANELS && PANEL_ACTIVE[index].load(Ordering::Relaxed)
+}
+
+pub fn panel_count() -> usize {
+    PANEL_ACTIVE.iter().filter(|slot| slot.load(Ordering::Relaxed)).count()
+}
+
+pub fn selected_panel() -> u8 {
+    SELECTED_PANEL.load(Ordering::Relaxed).min((MAX_PANELS - 1) as u8)
+}
+
+pub fn set_selected_panel(index: usize) {
+    if index < MAX_PANELS && panel_exists(index) {
+        SELECTED_PANEL.store(index as u8, Ordering::Relaxed);
+    }
+}
+
+pub fn hovered_panel() -> Option<usize> {
+    let value = HOVERED_PANEL.load(Ordering::Relaxed);
+    (value < MAX_PANELS as u8).then_some(value as usize)
+}
+
+pub fn set_hovered_panel_if_empty(index: usize) -> bool {
+    if index >= MAX_PANELS { return false; }
+    HOVERED_PANEL.compare_exchange(
+        NO_PANEL, index as u8, Ordering::Relaxed, Ordering::Relaxed
+    ).is_ok()
+}
+
+pub fn clear_hover_state() {
+    HOVERED_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    HOVERED_ADD.store(false, Ordering::Relaxed);
+    HOVERED_MODE_ACTION.store(0, Ordering::Relaxed);
+    HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
+    HOVERED_NAVIGATION.store(u8::MAX, Ordering::Relaxed);
+    HOVERED_DISTANCE.store(u8::MAX, Ordering::Relaxed);
+    DRAG_HOVERED.store(false, Ordering::Relaxed);
+}
+
+pub fn set_hovered_add(value: bool) {
+    HOVERED_ADD.store(value, Ordering::Relaxed);
+}
+
+pub fn hovered_add() -> bool {
+    HOVERED_ADD.load(Ordering::Relaxed)
+}
+
+pub fn set_hovered_mode_action(action: u8) {
+    HOVERED_MODE_ACTION.store(action.min(7), Ordering::Relaxed);
+}
+
+pub fn hovered_mode_action() -> u8 {
+    HOVERED_MODE_ACTION.load(Ordering::Relaxed)
+}
+
+pub fn dropdown_open() -> bool {
+    MODE_DROPDOWN_OPEN.load(Ordering::Relaxed)
+}
+
+pub fn toggle_dropdown() {
+    let next = !dropdown_open();
+    MODE_DROPDOWN_OPEN.store(next, Ordering::Relaxed);
+}
+
+pub fn close_dropdown() {
+    MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
+}
+
+pub fn is_2d_mode() -> bool {
+    TWO_D_MODE.load(Ordering::Relaxed)
+}
+
+pub fn toggle_2d_mode() -> bool {
+    let next = !is_2d_mode();
+    TWO_D_MODE.store(next, Ordering::Relaxed);
+    next
+}
+
+pub fn add_panel() -> Option<usize> {
+    let Some(index) = (0..MAX_PANELS).find(|i| !panel_exists(*i)) else {
+        return None;
+    };
+    PANEL_ACTIVE[index].store(true, Ordering::Relaxed);
+    PANEL_FOLLOW[index].store(false, Ordering::Relaxed);
+    PANEL_FOLLOW_CHANGED[index].store(false, Ordering::Relaxed);
+    PANEL_ANCHOR_READY[index].store(false, Ordering::Relaxed);
+    PANEL_DISTANCE_DIRTY[index].store(false, Ordering::Relaxed);
+    PANEL_X[index].store(0.0f64.to_bits(), Ordering::Relaxed);
+    PANEL_Y[index].store(0.0f64.to_bits(), Ordering::Relaxed);
+    PANEL_Z[index].store(0.0f64.to_bits(), Ordering::Relaxed);
+    PANEL_QX[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_QY[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_QZ[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_QW[index].store(1.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_ORBIT_YAW[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_ORBIT_PITCH[index].store(0.0f32.to_bits(), Ordering::Relaxed);
+    PANEL_DISTANCE[index].store(2.25f32.to_bits(), Ordering::Relaxed);
+    SELECTED_PANEL.store(index as u8, Ordering::Relaxed);
+    MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
+    Some(index)
+}
+
+pub fn load_panel(index: usize) {
+    if index >= MAX_PANELS { return; }
+    FOLLOW_MODE.store(PANEL_FOLLOW[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    FOLLOW_MODE_CHANGED.store(PANEL_FOLLOW_CHANGED[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_READY.store(PANEL_ANCHOR_READY[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    DISTANCE_DIRTY.store(PANEL_DISTANCE_DIRTY[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_X.store(PANEL_X[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_Y.store(PANEL_Y[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_Z.store(PANEL_Z[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_QX.store(PANEL_QX[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_QY.store(PANEL_QY[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_QZ.store(PANEL_QZ[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ANCHOR_QW.store(PANEL_QW[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ORBIT_YAW.store(PANEL_ORBIT_YAW[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    ORBIT_PITCH.store(PANEL_ORBIT_PITCH[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_DISTANCE.store(PANEL_DISTANCE[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    DRAGGING.store(DRAG_PANEL.load(Ordering::Relaxed) == index as u8, Ordering::Relaxed);
+    LAST_VIEW_READY.store(false, Ordering::Relaxed);
+    DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
+}
+
+pub fn save_panel(index: usize) {
+    if index >= MAX_PANELS { return; }
+    PANEL_FOLLOW[index].store(FOLLOW_MODE.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_FOLLOW_CHANGED[index].store(FOLLOW_MODE_CHANGED.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_ANCHOR_READY[index].store(ANCHOR_READY.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_DISTANCE_DIRTY[index].store(DISTANCE_DIRTY.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_X[index].store(ANCHOR_X.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_Y[index].store(ANCHOR_Y.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_Z[index].store(ANCHOR_Z.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_QX[index].store(ANCHOR_QX.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_QY[index].store(ANCHOR_QY.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_QZ[index].store(ANCHOR_QZ.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_QW[index].store(ANCHOR_QW.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_ORBIT_YAW[index].store(ORBIT_YAW.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_ORBIT_PITCH[index].store(ORBIT_PITCH.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_DISTANCE[index].store(PANEL_DISTANCE.load(Ordering::Relaxed), Ordering::Relaxed);
+}
