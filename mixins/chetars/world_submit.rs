@@ -411,7 +411,7 @@ fn world_submit(
                 label(game, draw, row_x + 12.0, row1_y + 17.0, "KEEP AT COORDINATES", 0xFF202833);
                 label(game, draw, row_x + 12.0, row1_y + 36.0, "Stays at the saved world position", 0xFF687482);
                 label(game, draw, row_x + 12.0, row2_y + 17.0, "FOLLOW ME", 0xFF202833);
-                label(game, draw, row_x + 12.0, row2_y + 36.0, "Follows the camera at this distance", 0xFF687482);
+                label(game, draw, row_x + 12.0, row2_y + 36.0, "Follows your position and keeps its angle", 0xFF687482);
 
                 let distance_y = top + 184.0;
                 paint(game, draw, rect(row_x, distance_y, row_width, 42.0, 9.0), 0xFFF2F4F7);
