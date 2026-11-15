@@ -20,6 +20,7 @@ static OPEN: AtomicBool = AtomicBool::new(false);
 
 // The default mode is pinned to a world position. Follow mode is opt-in.
 static FOLLOW_MODE: AtomicBool = AtomicBool::new(false);
+static FOLLOW_MODE_CHANGED: AtomicBool = AtomicBool::new(false);
 static DRAGGING: AtomicBool = AtomicBool::new(false);
 static DRAG_HOVERED: AtomicBool = AtomicBool::new(false);
 static ANCHOR_READY: AtomicBool = AtomicBool::new(false);
@@ -88,16 +89,19 @@ pub fn follow_mode() -> bool {
 pub fn set_follow_mode(follow: bool) {
     let changed = FOLLOW_MODE.swap(follow, Ordering::Relaxed) != follow;
     if changed {
-        // Switching modes creates a fresh anchor/offset at the current view.
-        ANCHOR_READY.store(false, Ordering::Relaxed);
-        ORBIT_YAW.store(0.0f32.to_bits(), Ordering::Relaxed);
-        ORBIT_PITCH.store(0.0f32.to_bits(), Ordering::Relaxed);
+        // Preserve the current placement. world_submit converts the same
+        // position between world-anchored and player-relative coordinates.
+        FOLLOW_MODE_CHANGED.store(true, Ordering::Relaxed);
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
         DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
         DRAGGING.store(false, Ordering::Relaxed);
         DRAG_HOVERED.store(false, Ordering::Relaxed);
     }
     SETTINGS_SELECTED.store(if follow { 1 } else { 0 }, Ordering::Relaxed);
+}
+
+pub fn take_follow_mode_changed() -> bool {
+    FOLLOW_MODE_CHANGED.swap(false, Ordering::Relaxed)
 }
 
 pub fn selected_setting() -> usize {
