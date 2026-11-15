@@ -255,7 +255,7 @@ fn world_submit(
                 && screen_x <= panel.body[0][0] + resize_size
                 && screen_y >= panel.body[0][1] + 3.0
                 && screen_y <= panel.body[0][1] + resize_size;
-            if over_resize {
+                if over_resize {
                 crate::game::chetars_spatial_gui::set_hovered_resize_panel(Some(panel_index));
             }
 
@@ -422,7 +422,7 @@ fn world_submit(
         paint(game, draw, panel.accent_left, 0xFF33AAFF);
         paint(game, draw, panel.accent_top, 0xFF33AAFF);
 
-        label(game, draw, panel.body[0][0] + 28.0, panel.body[0][1] + 22.0, "CHETARS", 0xFFFFFFFF);
+        label(game, draw, panel.body[0][0] + 48.0, panel.body[0][1] + 22.0, "CHETARS", 0xFFFFFFFF);
         label(
             game,
             draw,
