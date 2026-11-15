@@ -165,6 +165,8 @@ pub fn set_follow_mode(follow: bool) {
         DRAGGING.store(false, Ordering::Relaxed);
         DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
         DRAG_HOVERED.store(false, Ordering::Relaxed);
+        RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
+        RESIZE_READY.store(false, Ordering::Relaxed);
     }
     SETTINGS_SELECTED.store(if follow { 1 } else { 0 }, Ordering::Relaxed);
 }
@@ -788,6 +790,9 @@ pub fn remove_panel(index: usize) -> bool {
     SELECTED_PANEL.store(next as u8, Ordering::Relaxed);
     DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
     DRAGGING.store(false, Ordering::Relaxed);
+    RESIZE_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    RESIZE_READY.store(false, Ordering::Relaxed);
+    TWO_D_RESIZING.store(false, Ordering::Relaxed);
     MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
     HOVERED_PANEL.store(NO_PANEL, Ordering::Relaxed);
     HOVERED_ADD.store(false, Ordering::Relaxed);
