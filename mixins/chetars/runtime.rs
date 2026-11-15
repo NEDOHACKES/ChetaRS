@@ -93,7 +93,7 @@ static TWO_D_MODE: AtomicBool = AtomicBool::new(false);
 static TWO_D_POINTER_OVER: AtomicBool = AtomicBool::new(false);
 static HOVERED_MODE_ACTION: AtomicU8 = AtomicU8::new(0);
 // Hover actions: 0 none, 1 mode row, 2 Follow, 3 Keep, 4 2D mode,
-// 5 distance minus, 6 distance plus, 7 add panel.
+// 5 distance minus, 6 distance plus, 7 add panel, 8 previous panel, 9 next panel.
 
 pub fn is_open() -> bool {
     OPEN.load(Ordering::Relaxed)
@@ -502,6 +502,23 @@ pub fn set_selected_panel(index: usize) {
     }
 }
 
+pub fn step_selected_panel(forward: bool) -> Option<usize> {
+    let current = selected_panel() as usize;
+    for step in 1..=MAX_PANELS {
+        let index = if forward {
+            (current + step) % MAX_PANELS
+        } else {
+            (current + MAX_PANELS - (step % MAX_PANELS)) % MAX_PANELS
+        };
+        if panel_exists(index) {
+            set_selected_panel(index);
+            close_dropdown();
+            return Some(index);
+        }
+    }
+    None
+}
+
 pub fn hovered_panel() -> Option<usize> {
     let value = HOVERED_PANEL.load(Ordering::Relaxed);
     (value < MAX_PANELS as u8).then_some(value as usize)
@@ -539,7 +556,7 @@ pub fn hovered_add() -> bool {
 }
 
 pub fn set_hovered_mode_action(action: u8) {
-    HOVERED_MODE_ACTION.store(action.min(7), Ordering::Relaxed);
+    HOVERED_MODE_ACTION.store(action.min(9), Ordering::Relaxed);
 }
 
 pub fn hovered_mode_action() -> u8 {
