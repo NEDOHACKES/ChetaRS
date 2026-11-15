@@ -23,7 +23,13 @@ fn world_submit(
     let (camera_yaw, camera_pitch, _) = current_rotation.to_euler(glam::EulerRot::YXZ);
     let camera_position = glam::DVec3::from_array(draw.camera);
 
-    if crate::game::chetars_spatial_gui::is_dragging() {
+    if crate::game::chetars_spatial_gui::is_3d_resizing_for(panel_index) {
+        crate::game::chetars_spatial_gui::update_3d_resize(
+            panel_index,
+            camera_yaw,
+            camera_pitch,
+        );
+    } else if crate::game::chetars_spatial_gui::is_dragging() {
         crate::game::chetars_spatial_gui::update_drag_view(
             camera_yaw,
             camera_pitch,
@@ -53,10 +59,9 @@ fn world_submit(
         let anchor_position = camera_position + spawn_direction.as_dvec3()
             * crate::game::chetars_spatial_gui::panel_distance() as f64;
         let toward_player = -spawn_direction;
+        // Keep the UI upright: orbit elevation changes panel position, never its tilt.
         let spawn_rotation = glam::Quat::from_rotation_y(
             toward_player.x.atan2(toward_player.z),
-        ) * glam::Quat::from_rotation_x(
-            -toward_player.y.clamp(-1.0, 1.0).asin(),
         );
         crate::game::chetars_spatial_gui::save_anchor(
             anchor_position.to_array(),
@@ -91,8 +96,7 @@ fn world_submit(
             );
             let new_position = camera_position + offset.as_dvec3();
             let toward_player = (camera_position - new_position).as_vec3().normalize_or_zero();
-            let facing = glam::Quat::from_rotation_y(toward_player.x.atan2(toward_player.z))
-                * glam::Quat::from_rotation_x(-toward_player.y.clamp(-1.0, 1.0).asin());
+            let facing = glam::Quat::from_rotation_y(toward_player.x.atan2(toward_player.z));
             crate::game::chetars_spatial_gui::save_anchor(
                 new_position.to_array(),
                 facing,
@@ -143,24 +147,32 @@ fn world_submit(
         glam::DVec3::from_array(position)
     };
 
-    // Follow panels face the player so their controls stay accessible.
-    // Keep panels preserve the exact orientation saved when they were placed.
-    let panel_rotation = if follow {
-        // Keep the panel upright while Follow moves it through the full vertical
-        // orbit. Only yaw follows the player; camera pitch must not tilt the UI.
-        let toward_player = (camera_position - panel_position).as_vec3().normalize_or_zero();
-        let face_yaw = if toward_player.length_squared() > 0.5 {
-            toward_player.x.atan2(toward_player.z)
-        } else {
-            camera_yaw
-        };
-        glam::Quat::from_rotation_y(face_yaw)
+    // The face points toward the player while the panel is being orbited.
+    // In Keep mode we save that final yaw on every drag frame, then freeze it
+    // when RMB is released so the panel remains a fixed 3D object.
+    let toward_player = (camera_position - panel_position).as_vec3().normalize_or_zero();
+    let face_yaw = if toward_player.length_squared() > 0.5 {
+        toward_player.x.atan2(toward_player.z)
+    } else {
+        camera_yaw
+    };
+    let facing_rotation = glam::Quat::from_rotation_y(face_yaw);
+    let panel_rotation = if follow || crate::game::chetars_spatial_gui::is_dragging() {
+        if !follow {
+            crate::game::chetars_spatial_gui::save_anchor(
+                panel_position.to_array(),
+                facing_rotation,
+            );
+        }
+        facing_rotation
     } else {
         crate::game::chetars_spatial_gui::anchor().1
     };
 
     let panel_width_pixels = (panel.body[1][0] - panel.body[0][0]).abs().max(1.0);
-    let world_per_pixel = (3.6 / panel_width_pixels).clamp(0.001, 0.02);
+    let world_per_pixel = (3.6 / panel_width_pixels)
+        .clamp(0.001, 0.02)
+        * crate::game::chetars_spatial_gui::panel_scale();
 
     // Project the crosshair ray onto the panel plane. A back-side hit reverses
     // the local horizontal coordinate because the rear face is turned 180°.
@@ -235,7 +247,16 @@ fn world_submit(
             let mode_y = top + 26.0;
             let row_left = left + 22.0;
             let row_right = right - 22.0;
-            let mut action = 0u8;
+            let resize_size = 30.0;
+            let over_resize = screen_x >= panel.body[0][0] + 3.0
+                && screen_x <= panel.body[0][0] + resize_size
+                && screen_y >= panel.body[0][1] + 3.0
+                && screen_y <= panel.body[0][1] + resize_size;
+            if over_resize {
+                crate::game::chetars_spatial_gui::set_hovered_resize_panel(Some(panel_index));
+            }
+
+            let mut action = if over_resize { 11u8 } else { 0u8 };
             if crate::game::chetars_spatial_gui::selected_button() == 2 {
                 if screen_x >= row_left && screen_x <= row_right
                     && screen_y >= mode_y && screen_y <= mode_y + 38.0
@@ -337,6 +358,28 @@ fn world_submit(
         paint(game, draw, panel.body, 0xFF101010);
         paint(game, draw, panel.inner, 0xFF1E1E1E);
         paint(game, draw, panel.header, 0xFF101010);
+
+        // Dotted triangular handle at the upper-left corner resizes this 3D panel.
+        let resize_color = if crate::game::chetars_spatial_gui::hovered_resize_panel() == Some(panel_index)
+            || crate::game::chetars_spatial_gui::is_3d_resizing_for(panel_index)
+        { 0xFF55C7FF } else { 0xFFB8C5D1 };
+        for row in 0..5 {
+            for col in 0..=row {
+                paint(
+                    game,
+                    draw,
+                    rect(
+                        panel.body[0][0] + 9.0 + col as f32 * 4.2,
+                        panel.body[0][1] + 9.0 + row as f32 * 4.2,
+                        2.2,
+                        2.2,
+                        13.0,
+                    ),
+                    resize_color,
+                );
+            }
+        }
+
         let plus_x = panel.header[1][0] - 72.0;
         let close_x = plus_x + 40.0;
         let plus_y = panel.header[0][1] + 8.0;
@@ -553,9 +596,7 @@ fn world_submit(
     };
 
 
-    if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open()
-        || crate::game::chetars_spatial_gui::is_2d_mode()
-    {
+    if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
         crate::game::chetars_spatial_gui::clear_hover_state();
         return;
     }
