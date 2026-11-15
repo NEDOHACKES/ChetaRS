@@ -59,6 +59,14 @@ fn mouse_button(
     };
     crate::game::chetars_spatial_gui::set_selected_panel(index);
 
+    // The close button removes the selected panel. Keep one panel alive so the
+    // interface never becomes orphaned; the freed slot can be reused by +.
+    if crate::game::chetars_spatial_gui::hovered_mode_action() == 10 {
+        let _ = crate::game::chetars_spatial_gui::remove_panel(index);
+        *canceled = true;
+        return;
+    }
+
     // The plus button creates an independent panel with its own world position,
     // orientation, Follow/Keep mode and distance. The tenth panel is the hard cap.
     if crate::game::chetars_spatial_gui::hovered_add()
