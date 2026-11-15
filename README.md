@@ -1,6 +1,6 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.5.4.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.5.5.
 
 ## Spatial display
 
@@ -11,10 +11,16 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 
 ## Position and movement
 
-- **Keep** preserves the panel's world position and the exact orientation it had when placed. It does not rotate to follow the player.
-- **Follow** tracks the player's position at the saved world-relative offset and turns the face toward the player.
-- Hold **Right Mouse Button** on a panel's top title bar and turn the camera to move that panel around the player. Each panel moves independently.
+- **Keep** stores the panel at its world position. During an RMB orbit drag it turns face-to-face toward the player; when RMB is released, its last orientation is frozen and no longer turns with the player.
+- **Follow** preserves the chosen orbit and distance relative to the player's position, while keeping the front face toward the player.
+- Hold **Right Mouse Button** on a panel's top title bar and turn the camera to move that panel around the player through a full horizontal 360° orbit. Each panel moves independently.
 - Scroll the wheel while aiming at a panel's title bar to change its distance. In Settings, the **− / +** controls and keyboard keys change the selected panel's distance.
+
+## Resizing
+
+- Every 3D panel has a dotted triangular grip in its upper-left corner. Aim at it, hold **Left Mouse Button**, then move/turn the camera to resize that panel.
+- The 2D window has the same dotted grip. Hold **Left Mouse Button** and move the system cursor to resize the 2D window.
+- 3D panel size is stored independently per panel; 2D window size is stored separately.
 
 ## Multiple panels
 
@@ -26,7 +32,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 
 - Aim at **HOME**, **PROFILE**, or **SETTINGS** in the left navigation and left-click.
 - **SETTINGS → Follow / Keep** opens a small list with the two choices. They are mutually exclusive for the selected panel.
-- **2D Panel** is a separate setting. It hides all world-space 3D panels and shows a screen-space 2D window. The mouse cursor is released while 2D mode is active; switching back to 3D restores mouse-look. Use the header's **< / >** arrows to choose which panel to configure in 2D mode.
+- **2D Panel** is a separate setting. It shows a screen-space control window while the world-space 3D panels remain visible behind it. The system cursor is released and a visible in-window pointer is drawn, so tabs, dropdowns and controls remain clickable. Switching back to 3D restores mouse-look. Use the header's **< / >** arrows to choose which panel to configure in 2D mode.
 - **F7** also switches between 2D and 3D while the panel is open.
 - **F6** shows or hides the interface; **Escape** closes it.
 
