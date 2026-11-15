@@ -319,7 +319,7 @@ pub fn update_drag_view(yaw: f32, pitch: f32, camera_position: [f64; 3]) {
                 let relative = glam::DVec3::from_array(position) - camera;
                 let radius = relative.length();
                 if radius.is_finite() && radius > 0.05 {
-                    PANEL_DISTANCE.store(radius as f32 .clamp(1.0, 8.0).to_bits(), Ordering::Relaxed);
+                    PANEL_DISTANCE.store((radius as f32).clamp(1.0, 8.0).to_bits(), Ordering::Relaxed);
                     ORBIT_YAW.store(relative.x.atan2(-relative.z).to_bits(), Ordering::Relaxed);
                     ORBIT_PITCH.store((relative.y / radius).clamp(-1.0, 1.0).asin().to_bits(), Ordering::Relaxed);
                 }
