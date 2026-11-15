@@ -23,11 +23,6 @@ fn mouse_button(
         return;
     }
 
-    // Keep the system pointer released whenever the 2D workspace receives input.
-    if crate::game::chetars_spatial_gui::is_2d_mode() {
-        game.capture(false);
-    }
-
     // A captured RMB drag belongs to the panel selected at the moment it began.
     if button == 1 && !pressed {
         let was_dragging = crate::game::chetars_spatial_gui::is_dragging();
@@ -42,6 +37,12 @@ fn mouse_button(
 
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
         return;
+    }
+
+    // Reassert a free system pointer for active 2D-panel input only; when the
+    // overlay is closed, ordinary gameplay keeps the normal captured mouse.
+    if crate::game::chetars_spatial_gui::is_2d_mode() {
+        game.capture(false);
     }
 
     let in_2d_panel = crate::game::chetars_spatial_gui::is_2d_mode()
