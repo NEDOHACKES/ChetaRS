@@ -57,7 +57,7 @@ fn render(
         batch.text(atlas, value, x, y, color, true);
     };
 
-    // Full-screen 2D window: world-space geometry is suppressed while this mode is active.
+    // Full-screen 2D control window. The 3D panels continue rendering in the world behind it.
     fill(batch, 0.0, 0.0, width, height, 0x66000000);
     fill(batch, x + 7.0, y + 9.0, panel_w, panel_h, 0x99000000);
     fill(batch, x, y, panel_w, panel_h, 0xFF111820);
@@ -90,7 +90,7 @@ fn render(
         }
     }
 
-    text(batch, x + 26.0, y + 28.0, "CHETARS", 0xFFFFFFFF);
+    text(batch, x + 48.0, y + 28.0, "CHETARS", 0xFFFFFFFF);
     text(
         batch,
         x + 112.0,
@@ -99,8 +99,8 @@ fn render(
         0xFFB8C4D0,
     );
 
-    // In 2D mode the world panels are hidden, so compact previous/next
-    // controls let the user select which independent panel is being edited.
+    // Compact previous/next controls select which independent 3D panel is
+    // being edited while all 3D panels remain visible in the world behind this window.
     let panel_prev_x = x + 270.0;
     let panel_next_x = x + 304.0;
     let panel_arrow_y = y + 18.0;
