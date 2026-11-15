@@ -71,12 +71,17 @@ fn render(
         add_y,
         34.0,
         30.0,
-        if pointer[0] >= add_x && pointer[0] <= add_x + 34.0
+        if crate::game::chetars_spatial_gui::panel_count()
+            >= crate::game::chetars_spatial_gui::max_panels()
+        { 0xFF272D34 }
+        else if pointer[0] >= add_x && pointer[0] <= add_x + 34.0
             && pointer[1] >= add_y && pointer[1] <= add_y + 30.0
         { 0xFF33AAFF } else { 0xFF354352 },
     );
     text(batch, add_x + 12.0, add_y + 21.0, "+", 0xFFFFFFFF);
-    let over_add = pointer[0] >= add_x && pointer[0] <= add_x + 34.0
+    let over_add = crate::game::chetars_spatial_gui::panel_count()
+        < crate::game::chetars_spatial_gui::max_panels()
+        && pointer[0] >= add_x && pointer[0] <= add_x + 34.0
         && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
     crate::game::chetars_spatial_gui::set_hovered_add(over_add);
     if over_add {
