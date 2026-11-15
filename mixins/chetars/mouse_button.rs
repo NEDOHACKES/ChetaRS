@@ -105,6 +105,14 @@ fn mouse_button(
             crate::game::chetars_spatial_gui::adjust_panel_distance(0.25);
             *canceled = true;
         }
+        8 => {
+            let _ = crate::game::chetars_spatial_gui::step_selected_panel(false);
+            *canceled = true;
+        }
+        9 => {
+            let _ = crate::game::chetars_spatial_gui::step_selected_panel(true);
+            *canceled = true;
+        }
         _ => {}
     }
     crate::game::chetars_spatial_gui::save_panel(index);
