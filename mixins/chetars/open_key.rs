@@ -34,6 +34,12 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
         "key.keyboard.enter" | "key.keyboard.keypad.enter" if tab == 2 => {
             crate::game::chetars_spatial_gui::toggle_selected_setting();
         }
+        "key.keyboard.minus" | "key.keyboard.keypad.subtract" if tab == 2 => {
+            crate::game::chetars_spatial_gui::adjust_panel_distance(-0.25);
+        }
+        "key.keyboard.equal" | "key.keyboard.keypad.add" if tab == 2 => {
+            crate::game::chetars_spatial_gui::adjust_panel_distance(0.25);
+        }
         _ => {}
     }
 }
