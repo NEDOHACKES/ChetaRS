@@ -7,14 +7,13 @@ fn mouse_button(
 ) {
     let _ = modifiers;
 
-    // Always release the drag latch, even when gameplay was just hidden by
-    // another screen or the overlay was closed while RMB remained held.
+    // Release only a drag that this panel actually captured.
     if button == 1 && !pressed {
+        let was_dragging = crate::game::chetars_spatial_gui::is_dragging();
         crate::game::chetars_spatial_gui::set_dragging(false);
-        if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
-            return;
+        if was_dragging {
+            *canceled = true;
         }
-        *canceled = true;
         return;
     }
 
@@ -22,11 +21,13 @@ fn mouse_button(
         return;
     }
 
-    // GLFW button 1 is the right mouse button. While held, camera rotation
-    // is converted into panel movement by world_submit.rs.
-    if button == 1 {
-        crate::game::chetars_spatial_gui::set_dragging(true);
-        *canceled = true;
+    // GLFW button 1 is RMB. It starts a drag only when the crosshair is over
+    // the full-width title bar; elsewhere Minecraft keeps its normal use action.
+    if button == 1 && pressed {
+        if crate::game::chetars_spatial_gui::can_drag_from_header() {
+            crate::game::chetars_spatial_gui::set_dragging(true);
+            *canceled = true;
+        }
         return;
     }
 
