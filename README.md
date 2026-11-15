@@ -1,6 +1,6 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.5.1.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.5.2.
 
 ## Spatial display
 
