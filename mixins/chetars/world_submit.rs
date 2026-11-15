@@ -48,9 +48,15 @@ fn draw_panel(
         ).normalize();
         let anchor_position = camera_position + spawn_direction.as_dvec3()
             * crate::game::chetars_spatial_gui::panel_distance() as f64;
+        let toward_player = -spawn_direction;
+        let spawn_rotation = glam::Quat::from_rotation_y(
+            toward_player.x.atan2(toward_player.z),
+        ) * glam::Quat::from_rotation_x(
+            -toward_player.y.clamp(-1.0, 1.0).asin(),
+        );
         crate::game::chetars_spatial_gui::save_anchor(
             anchor_position.to_array(),
-            current_rotation,
+            spawn_rotation,
         );
         crate::game::chetars_spatial_gui::set_orbit_angles(spawn_yaw, spawn_pitch);
     }
@@ -157,10 +163,12 @@ fn draw_panel(
     let ray_direction = current_rotation * glam::Vec3::NEG_Z;
     let panel_normal = panel_rotation * glam::Vec3::Z;
     let denominator = ray_direction.dot(panel_normal);
+    let mut hit_depth = f32::INFINITY;
     let hit = if denominator.abs() > 0.0001 {
         let to_panel = panel_position - camera_position;
         let t = to_panel.dot(panel_normal.as_dvec3()) / denominator as f64;
         if t > 0.0 && t.is_finite() {
+            hit_depth = t as f32;
             let world_hit = camera_position + ray_direction.as_dvec3() * t;
             let local_hit =
                 panel_rotation.inverse() * (world_hit - panel_position).as_vec3();
@@ -176,8 +184,15 @@ fn draw_panel(
         None
     };
 
-    // Only the closest panel under the crosshair owns mouse interaction.
-    let is_primary_hit = hit.is_some() && crate::game::chetars_spatial_gui::set_hovered_panel_if_empty(panel_index);
+    // Only the nearest panel whose actual rectangle is under the crosshair owns input.
+    let hit_inside = hit.is_some_and(|[screen_x, screen_y]| {
+        screen_x >= panel.body[0][0]
+            && screen_x <= panel.body[1][0]
+            && screen_y >= panel.body[0][1]
+            && screen_y <= panel.body[2][1]
+    });
+    let is_primary_hit = hit_inside
+        && crate::game::chetars_spatial_gui::set_hovered_panel_if_closer(panel_index, hit_depth);
     if is_primary_hit {
         if let Some([screen_x, screen_y]) = hit {
             let plus_x = panel.header[1][0] - 48.0;
