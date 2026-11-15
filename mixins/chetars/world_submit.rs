@@ -476,10 +476,19 @@ fn draw_panel(
 
                 let two_d_y = top + 148.0;
                 let two_d = crate::game::chetars_spatial_gui::is_2d_mode();
+                let two_progress = crate::game::chetars_spatial_gui::two_d_progress();
                 paint(game, draw, rect(row_x, two_d_y, row_width, 34.0, 9.0), 0xFFF2F4F7);
                 label(game, draw, row_x + 12.0, two_d_y + 22.0, "2D PANEL", 0xFF202833);
-                let status = if two_d { "ON" } else { "OFF" };
-                label(game, draw, row_x + row_width - 42.0, two_d_y + 22.0, status, if two_d { 0xFF167D48 } else { 0xFF687482 });
+
+                // Independent presentation switch; it does not alter Follow / Keep.
+                let switch_x = row_x + row_width - 66.0;
+                let switch_y = two_d_y + 4.0;
+                let switch_w = 50.0;
+                let switch_h = 26.0;
+                paint(game, draw, rect(switch_x, switch_y, switch_w, switch_h, 13.0),
+                    if two_d { 0xFF167D48 } else { 0xFF8A949E });
+                let knob_x = switch_x + 3.0 + two_progress * (switch_w - 20.0);
+                paint(game, draw, rect(knob_x, switch_y + 3.0, 20.0, 20.0, 10.0), 0xFFFFFFFF);
 
                 let distance_y = top + 192.0;
                 paint(game, draw, rect(row_x, distance_y, row_width, 36.0, 9.0), 0xFFF2F4F7);
