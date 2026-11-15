@@ -1,23 +1,16 @@
-fn world_submit(
+fn draw_panel(
     game: &crate::game::Game<'_>,
     draw: &mut NativeWorldDraw,
+    panel_index: usize,
 ) {
-    if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
-        crate::game::chetars_spatial_gui::set_drag_hovered(false);
-        crate::game::chetars_spatial_gui::set_hovered_setting(None);
-        crate::game::chetars_spatial_gui::set_hovered_navigation(None);
-        crate::game::chetars_spatial_gui::set_hovered_distance_control(None);
+    if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open()
+        || !crate::game::chetars_spatial_gui::panel_exists(panel_index)
+    {
         return;
     }
 
     let (width, height, mouse) = crate::game::chetars_spatial_gui::viewport();
-    if width <= 0.0 || height <= 0.0 {
-        crate::game::chetars_spatial_gui::set_drag_hovered(false);
-        crate::game::chetars_spatial_gui::set_hovered_setting(None);
-        crate::game::chetars_spatial_gui::set_hovered_navigation(None);
-        crate::game::chetars_spatial_gui::set_hovered_distance_control(None);
-        return;
-    }
+    if width <= 0.0 || height <= 0.0 { return; }
 
     let panel = crate::game::chetars_spatial_gui::panel(mouse, width, height);
     let centre_x = width * 0.5;
@@ -26,11 +19,13 @@ fn world_submit(
     let (camera_yaw, camera_pitch, _) = current_rotation.to_euler(glam::EulerRot::YXZ);
     let camera_position = glam::DVec3::from_array(draw.camera);
 
-    crate::game::chetars_spatial_gui::update_drag_view(
-        camera_yaw,
-        camera_pitch,
-        camera_position.to_array(),
-    );
+    if crate::game::chetars_spatial_gui::is_dragging() {
+        crate::game::chetars_spatial_gui::update_drag_view(
+            camera_yaw,
+            camera_pitch,
+            camera_position.to_array(),
+        );
+    }
 
     let follow = crate::game::chetars_spatial_gui::follow_mode();
 
@@ -72,9 +67,13 @@ fn world_submit(
                 orbit_pitch,
                 crate::game::chetars_spatial_gui::panel_distance(),
             );
+            let new_position = camera_position + offset.as_dvec3();
+            let toward_player = (camera_position - new_position).as_vec3().normalize_or_zero();
+            let facing = glam::Quat::from_rotation_y(toward_player.x.atan2(toward_player.z))
+                * glam::Quat::from_rotation_x(-toward_player.y.clamp(-1.0, 1.0).asin());
             crate::game::chetars_spatial_gui::save_anchor(
-                (camera_position + offset.as_dvec3()).to_array(),
-                saved_rotation,
+                new_position.to_array(),
+                facing,
             );
         }
     }
@@ -122,19 +121,21 @@ fn world_submit(
         glam::DVec3::from_array(position)
     };
 
-    // The front face (+Z in panel-local space) always points directly at the
-    // player's current position. This lets the player walk around an orbiting
-    // panel and still see/click its controls instead of getting stuck behind it.
-    let toward_player = (camera_position - panel_position).as_vec3().normalize_or_zero();
-    let toward_player = if toward_player.length_squared() > 0.5 {
-        toward_player
+    // Follow panels face the player so their controls stay accessible.
+    // Keep panels preserve the exact orientation saved when they were placed.
+    let panel_rotation = if follow {
+        let toward_player = (camera_position - panel_position).as_vec3().normalize_or_zero();
+        let toward_player = if toward_player.length_squared() > 0.5 {
+            toward_player
+        } else {
+            current_rotation * glam::Vec3::Z
+        };
+        let face_yaw = toward_player.x.atan2(toward_player.z);
+        let face_pitch = -toward_player.y.clamp(-1.0, 1.0).asin();
+        glam::Quat::from_rotation_y(face_yaw) * glam::Quat::from_rotation_x(face_pitch)
     } else {
-        current_rotation * glam::Vec3::Z
+        crate::game::chetars_spatial_gui::anchor().1
     };
-    let face_yaw = toward_player.x.atan2(toward_player.z);
-    let face_pitch = -toward_player.y.clamp(-1.0, 1.0).asin();
-    let panel_rotation = glam::Quat::from_rotation_y(face_yaw)
-        * glam::Quat::from_rotation_x(face_pitch);
 
     let panel_width_pixels = (panel.body[1][0] - panel.body[0][0]).abs().max(1.0);
     let world_per_pixel = (3.6 / panel_width_pixels).clamp(0.001, 0.02);
@@ -144,18 +145,16 @@ fn world_submit(
     let ray_direction = current_rotation * glam::Vec3::NEG_Z;
     let panel_normal = panel_rotation * glam::Vec3::Z;
     let denominator = ray_direction.dot(panel_normal);
+    let mut hit_distance = None;
     let hit = if denominator.abs() > 0.0001 {
         let to_panel = panel_position - camera_position;
         let t = to_panel.dot(panel_normal.as_dvec3()) / denominator as f64;
         if t > 0.0 && t.is_finite() {
+            hit_distance = Some(t as f32);
             let world_hit = camera_position + ray_direction.as_dvec3() * t;
             let local_hit =
                 panel_rotation.inverse() * (world_hit - panel_position).as_vec3();
-            let local_x = if denominator > 0.0 {
-                -local_hit.x
-            } else {
-                local_hit.x
-            };
+            let local_x = if denominator > 0.0 { -local_hit.x } else { local_hit.x };
             Some([
                 centre_x + local_x / world_per_pixel,
                 centre_y - local_hit.y / world_per_pixel,
@@ -167,78 +166,76 @@ fn world_submit(
         None
     };
 
-    // RMB dragging starts only from the top title bar.
-    let drag_hover = hit.is_some_and(|[screen_x, screen_y]| {
-        screen_x >= panel.body[0][0]
-            && screen_x <= panel.body[1][0]
-            && screen_y >= panel.body[0][1]
-            && screen_y <= panel.header[2][1]
-    });
-    crate::game::chetars_spatial_gui::set_drag_hovered(drag_hover);
-
-    // Sidebar navigation gets its own hit targets; this was previously drawn
-    // but had no click handler, which made the three sections appear inert.
-    let mut hovered_navigation = None;
-    if let Some([screen_x, screen_y]) = hit {
-        for index in 0..3 {
-            let button = panel.buttons[index];
-            if screen_x >= button[0][0]
-                && screen_x <= button[1][0]
-                && screen_y >= button[0][1]
-                && screen_y <= button[2][1]
-            {
-                hovered_navigation = Some(index);
-                break;
-            }
-        }
-    }
-    crate::game::chetars_spatial_gui::set_hovered_navigation(hovered_navigation);
-
-    let mut hovered_setting = None;
-    let mut hovered_distance = None;
-    if crate::game::chetars_spatial_gui::selected_button() == 2 {
+    // Only the closest panel under the crosshair owns mouse interaction.
+    let is_primary_hit = hit.is_some() && crate::game::chetars_spatial_gui::set_hovered_panel_if_empty(panel_index);
+    if is_primary_hit {
         if let Some([screen_x, screen_y]) = hit {
+            let plus_x = panel.header[1][0] - 48.0;
+            let plus_y = panel.header[0][1] + 8.0;
+            let over_add = screen_x >= plus_x && screen_x <= plus_x + 34.0
+                && screen_y >= plus_y && screen_y <= plus_y + 30.0;
+            crate::game::chetars_spatial_gui::set_hovered_add(over_add);
+            let drag_hover = !over_add
+                && screen_x >= panel.body[0][0]
+                && screen_x <= panel.body[1][0]
+                && screen_y >= panel.body[0][1]
+                && screen_y <= panel.header[2][1];
+            crate::game::chetars_spatial_gui::set_drag_hovered(drag_hover);
+
+            let mut nav = None;
+            for index in 0..3 {
+                let button = panel.buttons[index];
+                if screen_x >= button[0][0] && screen_x <= button[1][0]
+                    && screen_y >= button[0][1] && screen_y <= button[2][1]
+                {
+                    nav = Some(index);
+                    break;
+                }
+            }
+            crate::game::chetars_spatial_gui::set_hovered_navigation(nav);
+
             let left = panel.white_area[0][0];
             let top = panel.white_area[0][1];
             let right = panel.white_area[1][0];
+            let mode_y = top + 26.0;
             let row_left = left + 22.0;
             let row_right = right - 22.0;
-            let row1_top = top + 30.0;
-            let row2_top = row1_top + 74.0;
-            if screen_x >= row_left
-                && screen_x <= row_right
-                && screen_y >= row1_top
-                && screen_y <= row1_top + 58.0
-            {
-                hovered_setting = Some(0);
-            } else if screen_x >= row_left
-                && screen_x <= row_right
-                && screen_y >= row2_top
-                && screen_y <= row2_top + 58.0
-            {
-                hovered_setting = Some(1);
-            }
+            let mut action = 0u8;
+            if crate::game::chetars_spatial_gui::selected_button() == 2 {
+                if screen_x >= row_left && screen_x <= row_right
+                    && screen_y >= mode_y && screen_y <= mode_y + 38.0
+                {
+                    action = 1;
+                }
 
-            let distance_y = top + 184.0;
-            let minus_x = right - 112.0;
-            let plus_x = right - 58.0;
-            if screen_y >= distance_y
-                && screen_y <= distance_y + 42.0
-                && screen_x >= minus_x
-                && screen_x <= minus_x + 42.0
-            {
-                hovered_distance = Some(0);
-            } else if screen_y >= distance_y
-                && screen_y <= distance_y + 42.0
-                && screen_x >= plus_x
-                && screen_x <= plus_x + 42.0
-            {
-                hovered_distance = Some(1);
+                if crate::game::chetars_spatial_gui::dropdown_open() {
+                    let option_y = top + 70.0;
+                    if screen_x >= row_left && screen_x <= row_right
+                        && screen_y >= option_y && screen_y <= option_y + 32.0
+                    { action = 2; }
+                    else if screen_x >= row_left && screen_x <= row_right
+                        && screen_y >= option_y + 36.0 && screen_y <= option_y + 68.0
+                    { action = 3; }
+                }
+
+                let two_d_y = top + 148.0;
+                if screen_x >= row_left && screen_x <= row_right
+                    && screen_y >= two_d_y && screen_y <= two_d_y + 34.0
+                { action = 4; }
+
+                let distance_y = top + 192.0;
+                let minus_x = right - 112.0;
+                let plus_x = right - 58.0;
+                if screen_y >= distance_y && screen_y <= distance_y + 36.0
+                    && screen_x >= minus_x && screen_x <= minus_x + 42.0
+                { action = 5; }
+                else if screen_y >= distance_y && screen_y <= distance_y + 36.0
+                    && screen_x >= plus_x && screen_x <= plus_x + 42.0
+                { action = 6; }
             }
+            crate::game::chetars_spatial_gui::set_hovered_mode_action(if over_add { 7 } else { action });
         }
     }
-    crate::game::chetars_spatial_gui::set_hovered_setting(hovered_setting);
-    crate::game::chetars_spatial_gui::set_hovered_distance_control(hovered_distance);
 
     let paint = |game: &crate::game::Game<'_>,
                  draw: &mut NativeWorldDraw,
@@ -309,6 +306,15 @@ fn world_submit(
         paint(game, draw, panel.body, 0xFF101010);
         paint(game, draw, panel.inner, 0xFF1E1E1E);
         paint(game, draw, panel.header, 0xFF101010);
+        let plus_x = panel.header[1][0] - 48.0;
+        let plus_y = panel.header[0][1] + 8.0;
+        paint(
+            game,
+            draw,
+            rect(plus_x, plus_y, 34.0, 30.0, 12.0),
+            if crate::game::chetars_spatial_gui::hovered_add() { 0xFF33AAFF } else { 0xFF303844 },
+        );
+        label(game, draw, plus_x + 12.0, plus_y + 21.0, "+", 0xFFFFFFFF);
         paint(game, draw, panel.sidebar, 0xFF1E1E1E);
         paint(game, draw, panel.content_frame, 0xFF4A4A4A);
         paint(game, draw, panel.white_area, 0xFFFFFFFF);
@@ -414,66 +420,48 @@ fn world_submit(
                 }
             }
             2 => {
-                // The two mutually exclusive placement switches are the
-                // actual settings requested: keep a world anchor or follow.
-                let [pin_progress, follow_progress] = switch_progress.unwrap_or([1.0, 0.0]);
-                let row_height = 58.0;
-                let row1_y = top + 30.0;
-                let row2_y = row1_y + 74.0;
-                let selected = crate::game::chetars_spatial_gui::selected_setting();
-
-                label(game, draw, row_x, top + 12.0, "PANEL BEHAVIOR", 0xFF303844);
-
-                let draw_switch = |game: &crate::game::Game<'_>,
-                                   draw: &mut NativeWorldDraw,
-                                   y: f32,
-                                   progress: f32,
-                                   is_selected: bool| {
-                    let row_color = if is_selected { 0xFFEAF5FF } else { 0xFFF2F4F7 };
-                    paint(game, draw, rect(row_x, y, row_width, row_height, 9.0), row_color);
-                    if is_selected {
-                        paint(game, draw, rect(row_x, y, 3.0, row_height, 10.0), 0xFF33AAFF);
-                    }
-                    let track_w = 54.0;
-                    let track_h = 24.0;
-                    let track_x = row_x + row_width - track_w - 14.0;
-                    let track_y = y + (row_height - track_h) * 0.5;
-                    let blend = progress.clamp(0.0, 1.0);
-                    let red = (0x65 as f32 + (0x33 as f32 - 0x65 as f32) * blend) as u32;
-                    let green = (0x6B as f32 + (0xAA as f32 - 0x6B as f32) * blend) as u32;
-                    let blue = (0x78 as f32 + (0xFF as f32 - 0x78 as f32) * blend) as u32;
-                    let track_color = 0xFF000000 | (red << 16) | (green << 8) | blue;
-                    paint(game, draw, rect(track_x, track_y, track_w, track_h, 11.0), track_color);
-                    let knob_size = 18.0;
-                    let knob_x = track_x + 3.0 + blend * (track_w - knob_size - 6.0);
-                    paint(
-                        game,
-                        draw,
-                        rect(knob_x, track_y + 3.0, knob_size, knob_size, 12.0),
-                        0xFFFFFFFF,
-                    );
+                let mode_y = top + 26.0;
+                let mode_text = if crate::game::chetars_spatial_gui::follow_mode() {
+                    "FOLLOW"
+                } else {
+                    "KEEP"
                 };
+                let open = crate::game::chetars_spatial_gui::dropdown_open();
+                paint(game, draw, rect(row_x, mode_y, row_width, 38.0, 9.0),
+                    if open { 0xFFEAF5FF } else { 0xFFF2F4F7 });
+                label(game, draw, row_x + 12.0, mode_y + 24.0, "FOLLOW / KEEP", 0xFF202833);
+                label(game, draw, row_x + row_width - 118.0, mode_y + 24.0, mode_text, 0xFF303844);
+                label(game, draw, row_x + row_width - 34.0, mode_y + 24.0,
+                    if open { "^" } else { "v" }, 0xFF303844);
 
-                draw_switch(game, draw, row1_y, pin_progress, selected == 0);
-                draw_switch(game, draw, row2_y, follow_progress, selected == 1);
-                label(game, draw, row_x + 12.0, row1_y + 17.0, "KEEP AT COORDINATES", 0xFF202833);
-                label(game, draw, row_x + 12.0, row1_y + 36.0, "Stays at the saved world position", 0xFF687482);
-                label(game, draw, row_x + 12.0, row2_y + 17.0, "FOLLOW ME", 0xFF202833);
-                label(game, draw, row_x + 12.0, row2_y + 36.0, "Follows your position and keeps its angle", 0xFF687482);
+                if open {
+                    let option_y = top + 70.0;
+                    let follow_color = if crate::game::chetars_spatial_gui::follow_mode() { 0xFFDCEEFF } else { 0xFFF2F4F7 };
+                    let keep_color = if !crate::game::chetars_spatial_gui::follow_mode() { 0xFFDCEEFF } else { 0xFFF2F4F7 };
+                    paint(game, draw, rect(row_x + 16.0, option_y, row_width - 16.0, 32.0, 9.0), follow_color);
+                    label(game, draw, row_x + 28.0, option_y + 21.0, "FOLLOW", 0xFF202833);
+                    paint(game, draw, rect(row_x + 16.0, option_y + 36.0, row_width - 16.0, 32.0, 9.0), keep_color);
+                    label(game, draw, row_x + 28.0, option_y + 57.0, "KEEP", 0xFF202833);
+                }
 
-                let distance_y = top + 184.0;
-                paint(game, draw, rect(row_x, distance_y, row_width, 42.0, 9.0), 0xFFF2F4F7);
-                label(game, draw, row_x + 12.0, distance_y + 25.0, "DISTANCE", 0xFF202833);
-                let value_x = row_x + row_width - 184.0;
-                label(game, draw, value_x, distance_y + 25.0, distance_text.as_str(), 0xFF303844);
+                let two_d_y = top + 148.0;
+                let two_d = crate::game::chetars_spatial_gui::is_2d_mode();
+                paint(game, draw, rect(row_x, two_d_y, row_width, 34.0, 9.0), 0xFFF2F4F7);
+                label(game, draw, row_x + 12.0, two_d_y + 22.0, "2D PANEL", 0xFF202833);
+                let status = if two_d { "ON" } else { "OFF" };
+                label(game, draw, row_x + row_width - 42.0, two_d_y + 22.0, status, if two_d { 0xFF167D48 } else { 0xFF687482 });
+
+                let distance_y = top + 192.0;
+                paint(game, draw, rect(row_x, distance_y, row_width, 36.0, 9.0), 0xFFF2F4F7);
+                label(game, draw, row_x + 12.0, distance_y + 23.0, "DISTANCE", 0xFF202833);
+                let distance_text = format!("{:.1}", crate::game::chetars_spatial_gui::panel_distance());
+                label(game, draw, row_x + row_width - 156.0, distance_y + 23.0, distance_text.as_str(), 0xFF303844);
                 let minus_x = right - 112.0;
                 let plus_x = right - 58.0;
-                paint(game, draw, rect(minus_x, distance_y + 5.0, 42.0, 32.0, 11.0),
-                    if crate::game::chetars_spatial_gui::hovered_distance_control() == Some(0) { 0xFF33AAFF } else { 0xFF4B5563 });
-                paint(game, draw, rect(plus_x, distance_y + 5.0, 42.0, 32.0, 11.0),
-                    if crate::game::chetars_spatial_gui::hovered_distance_control() == Some(1) { 0xFF33AAFF } else { 0xFF4B5563 });
-                label(game, draw, minus_x + 15.0, distance_y + 25.0, "-", 0xFFFFFFFF);
-                label(game, draw, plus_x + 14.0, distance_y + 25.0, "+", 0xFFFFFFFF);
+                paint(game, draw, rect(minus_x, distance_y + 2.0, 42.0, 32.0, 11.0), 0xFF4B5563);
+                paint(game, draw, rect(plus_x, distance_y + 2.0, 42.0, 32.0, 11.0), 0xFF4B5563);
+                label(game, draw, minus_x + 15.0, distance_y + 23.0, "-", 0xFFFFFFFF);
+                label(game, draw, plus_x + 14.0, distance_y + 23.0, "+", 0xFFFFFFFF);
             }
             _ => {}
         }
@@ -489,9 +477,6 @@ fn world_submit(
     };
 
     draw.push();
-    // Use the exact same world position as the ray-hit calculation above.
-    // The old Follow path rotated a local offset after a frozen orientation,
-    // so its rendered position and interactive hit plane diverged.
     let _ = draw.translate_world(panel_position.to_array());
     let (panel_yaw, panel_pitch, panel_roll) =
         panel_rotation.to_euler(glam::EulerRot::YXZ);
@@ -501,12 +486,34 @@ fn world_submit(
     draw.scale([world_per_pixel, world_per_pixel, world_per_pixel]);
 
     draw_face(game, draw);
-
-    // Render a second, readable UI on the reverse side.
     draw.push();
     draw.rotate_about([0.0, 1.0, 0.0], 180.0, [0.0; 3]);
     draw_face(game, draw);
     draw.pop();
-
     draw.pop();
+}
+
+fn world_submit(
+    game: &crate::game::Game<'_>,
+    draw: &mut NativeWorldDraw,
+) {
+    if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open()
+        || crate::game::chetars_spatial_gui::is_2d_mode()
+    {
+        crate::game::chetars_spatial_gui::clear_hover_state();
+        return;
+    }
+
+    crate::game::chetars_spatial_gui::clear_hover_state();
+    for index in 0..crate::game::chetars_spatial_gui::max_panels() {
+        if !crate::game::chetars_spatial_gui::panel_exists(index) {
+            continue;
+        }
+        crate::game::chetars_spatial_gui::load_panel(index);
+        draw_panel(game, draw, index);
+        crate::game::chetars_spatial_gui::save_panel(index);
+    }
+    crate::game::chetars_spatial_gui::load_panel(
+        crate::game::chetars_spatial_gui::selected_panel() as usize,
+    );
 }
