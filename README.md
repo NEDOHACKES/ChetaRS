@@ -1,6 +1,6 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.3.2.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.4.0.
 
 ## Spatial display
 
@@ -12,10 +12,18 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 ## Position and movement
 
 - **Keep at coordinates** is enabled by default. The panel is placed in the world when first shown and then stays at that world position and orientation while you turn your head or walk.
-- Aim at the panel's top title bar, then hold **Right Mouse Button** and move/turn the mouse to reposition it. The rest of the panel does not capture RMB, so normal world interactions remain available.
+- Aim at the panel's top title bar, then hold **Right Mouse Button** and turn the camera to orbit the panel around you horizontally and vertically. Release RMB to leave it at the new world position.
+- Scroll the mouse wheel while aiming at the top bar to move the panel closer or farther away. In Settings, the **- / +** controls and keyboard keys also change distance.
 - The panel is rendered on both sides with readable text from the front and back.
-- **Follow me** moves the panel in front of the current camera and keeps it there.
+- **Follow me** keeps the panel at the selected orbit and distance relative to the camera; **Keep at coordinates** leaves it fixed in the world after dragging.
 - The two position modes are mutually exclusive.
+
+## Sections and controls
+
+- Aim the crosshair at **HOME**, **PROFILE**, or **SETTINGS** in the left navigation and left-click to open that page.
+- **HOME** shows the function catalogue; **PROFILE** shows the active placement mode, distance and movement controls.
+- **SETTINGS** contains the mutually exclusive **Keep at coordinates** / **Follow me** switches and distance controls.
+- When following the camera, use **Left / Right Arrow** to switch sections and **Up / Down + Enter** to change placement mode; **- / +** changes distance.
 
 ## Settings
 
