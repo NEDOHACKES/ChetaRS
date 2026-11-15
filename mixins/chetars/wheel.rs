@@ -9,11 +9,14 @@ fn wheel(
         return;
     }
 
+    let has_panel_target = crate::game::chetars_spatial_gui::hovered_panel().is_some();
     let over_zoom_area = if crate::game::chetars_spatial_gui::is_2d_mode() {
-        crate::game::chetars_spatial_gui::selected_button() == 2
+        crate::game::chetars_spatial_gui::two_d_pointer_over()
+            && crate::game::chetars_spatial_gui::selected_button() == 2
     } else {
-        crate::game::chetars_spatial_gui::can_drag_from_header()
-            || crate::game::chetars_spatial_gui::selected_button() == 2
+        has_panel_target
+            && (crate::game::chetars_spatial_gui::can_drag_from_header()
+                || crate::game::chetars_spatial_gui::selected_button() == 2)
     };
 
     if over_zoom_area {
