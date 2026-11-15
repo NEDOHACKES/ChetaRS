@@ -215,7 +215,33 @@ fn render(
             let two_d = crate::game::chetars_spatial_gui::is_2d_mode();
             fill(batch, row_x, two_y, row_w, 40.0, 0xFFE8EEF4);
             text(batch, row_x + 14.0, two_y + 25.0, "2D PANEL", 0xFF202833);
-            text(batch, row_x + row_w - 52.0, two_y + 25.0, if two_d { "ON" } else { "OFF" },
+
+            // Pixel-rounded oval switch with a circular-looking knob.
+            // HudBatch exposes rectangles, so the rounded shape is built from
+            // a full middle band plus smaller top/bottom bands.
+            let switch_x = row_x + row_w - 78.0;
+            let switch_y = two_y + 7.0;
+            let switch_w = 56.0;
+            let switch_h = 26.0;
+            let track = if two_d { 0xFF167D48 } else { 0xFF8A949E };
+            fill(batch, switch_x + 6.0, switch_y, switch_w - 12.0, switch_h, track);
+            fill(batch, switch_x, switch_y + 6.0, switch_w, switch_h - 12.0, track);
+            fill(batch, switch_x + 3.0, switch_y + 3.0, switch_w - 6.0, switch_h - 6.0, track);
+
+            let knob_x = if two_d {
+                switch_x + switch_w - 23.0
+            } else {
+                switch_x + 3.0
+            };
+            let knob_y = switch_y + 3.0;
+            let knob_w = 20.0;
+            let knob_h = 20.0;
+            // Three bands make the knob read as a circle instead of a square.
+            fill(batch, knob_x + 3.0, knob_y, knob_w - 6.0, knob_h, 0xFFFFFFFF);
+            fill(batch, knob_x, knob_y + 3.0, knob_w, knob_h - 6.0, 0xFFFFFFFF);
+            fill(batch, knob_x + 2.0, knob_y + 2.0, knob_w - 4.0, knob_h - 4.0, 0xFFFFFFFF);
+
+            text(batch, switch_x - 30.0, two_y + 25.0, if two_d { "ON" } else { "OFF" },
                 if two_d { 0xFF167D48 } else { 0xFF687482 });
             let two_over = pointer[0] >= row_x && pointer[0] <= row_x + row_w
                 && pointer[1] >= two_y && pointer[1] <= two_y + 40.0;
