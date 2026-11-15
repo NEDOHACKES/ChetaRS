@@ -13,7 +13,11 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
     }
 
     if key == "key.keyboard.escape" {
-        crate::game::chetars_spatial_gui::close();
+        if crate::game::chetars_spatial_gui::dropdown_open() {
+            crate::game::chetars_spatial_gui::close_dropdown();
+        } else {
+            crate::game::chetars_spatial_gui::close();
+        }
         return;
     }
 
@@ -32,13 +36,30 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
             crate::game::chetars_spatial_gui::select_setting(1);
         }
         "key.keyboard.enter" | "key.keyboard.keypad.enter" if tab == 2 => {
-            crate::game::chetars_spatial_gui::toggle_selected_setting();
+            let index = crate::game::chetars_spatial_gui::selected_panel() as usize;
+            crate::game::chetars_spatial_gui::load_panel(index);
+            if crate::game::chetars_spatial_gui::dropdown_open() {
+                crate::game::chetars_spatial_gui::toggle_selected_setting();
+                crate::game::chetars_spatial_gui::close_dropdown();
+                crate::game::chetars_spatial_gui::save_panel(index);
+            } else {
+                crate::game::chetars_spatial_gui::toggle_dropdown();
+            }
         }
         "key.keyboard.minus" | "key.keyboard.keypad.subtract" if tab == 2 => {
+            let index = crate::game::chetars_spatial_gui::selected_panel() as usize;
+            crate::game::chetars_spatial_gui::load_panel(index);
             crate::game::chetars_spatial_gui::adjust_panel_distance(-0.25);
+            crate::game::chetars_spatial_gui::save_panel(index);
         }
         "key.keyboard.equal" | "key.keyboard.keypad.add" if tab == 2 => {
+            let index = crate::game::chetars_spatial_gui::selected_panel() as usize;
+            crate::game::chetars_spatial_gui::load_panel(index);
             crate::game::chetars_spatial_gui::adjust_panel_distance(0.25);
+            crate::game::chetars_spatial_gui::save_panel(index);
+        }
+        "key.keyboard.d" if tab == 2 => {
+            crate::game::chetars_spatial_gui::toggle_2d_mode();
         }
         _ => {}
     }
