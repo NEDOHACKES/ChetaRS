@@ -1,6 +1,6 @@
 [mod]
 id = "chetars_spatial_gui"
-version = "0.3.2"
+version = "0.4.0"
 priority = 100
 
 [compatibility]
@@ -56,4 +56,15 @@ bindings = [
   { name = "pressed", ty = "bool", value = "pressed" },
   { name = "modifiers", ty = "u32", value = "modifiers" },
   { name = "canceled", ty = "&mut bool", value = "canceled" }
+]
+
+[[injection]]
+id = "wheel"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_wheel"
+helper = "wheel.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "steps", ty = "f32", value = "steps" },
+  { name = "claimed", ty = "&mut bool", value = "claimed" }
 ]
