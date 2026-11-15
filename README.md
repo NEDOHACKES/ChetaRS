@@ -6,7 +6,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 
 - Press **F6** to show or hide the floating display.
 - The panel is a camera-facing 3D display drawn through Horizon's native world-canvas API.
-- The main content area is a clean white surface. No player inventory, container slots, item stacks or inventory texture are used.
+- The content area is a white canvas with the mod's function catalogue, placement profile and settings rendered over it. No player inventory, container slots, item stacks or inventory texture are used.
 - The display has a dark frame, side navigation, shadow and animated settings switches.
 
 ## Position and movement
@@ -39,7 +39,7 @@ Select **SETTINGS** by pressing **Right Arrow** twice from HOME (Left / Right cy
 
 The floating-screen presentation is inspired by [Spatial-GUI](https://github.com/tastytrash/Spatial-GUI).
 
-ChetaRS is a native Rust implementation for Horizon. It does not port Spatial-GUI's Java mixins, screen capture pipeline or inventory UI. The central content is a newly drawn white world-space quad instead.
+ChetaRS is a native Rust implementation for Horizon. It does not port Spatial-GUI's Java mixins, screen capture pipeline or inventory UI. The central content is a newly drawn white world-space canvas with the mod's catalogue and controls layered on top.
 
 ## Horizon compatibility
 
