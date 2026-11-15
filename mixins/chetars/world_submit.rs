@@ -33,26 +33,57 @@ fn world_submit(
     );
 
     let follow = crate::game::chetars_spatial_gui::follow_mode();
-    let distance_dirty = crate::game::chetars_spatial_gui::take_distance_dirty();
-    let distance = crate::game::chetars_spatial_gui::panel_distance();
 
     if !crate::game::chetars_spatial_gui::anchor_ready() {
-        let forward = current_rotation * glam::Vec3::NEG_Z;
-        let direction = forward.normalize();
-        let anchor_position = camera_position + direction.as_dvec3() * distance as f64;
+        let forward = (current_rotation * glam::Vec3::NEG_Z).normalize();
+        let anchor_position = camera_position + forward.as_dvec3()
+            * crate::game::chetars_spatial_gui::panel_distance() as f64;
         crate::game::chetars_spatial_gui::save_anchor(
             anchor_position.to_array(),
             current_rotation,
         );
         crate::game::chetars_spatial_gui::set_orbit_angles(
-            direction.x.atan2(-direction.z),
-            direction.y.clamp(-1.0, 1.0).asin(),
+            forward.x.atan2(-forward.z),
+            forward.y.clamp(-1.0, 1.0).asin(),
         );
     }
 
-    // A wheel/button distance change moves a pinned panel along its current
-    // camera-to-panel direction. While dragging, the orbit update already
-    // applies the new radius, so no second reposition is needed.
+    // Switching modes must not snap the panel. Capture its current world
+    // point, then reinterpret that same point as an offset from the player
+    // (Follow) or store the current follow offset as a world anchor (Pinned).
+    if crate::game::chetars_spatial_gui::take_follow_mode_changed() {
+        let (saved_position, saved_rotation) = crate::game::chetars_spatial_gui::anchor();
+        let relative = glam::DVec3::from_array(saved_position) - camera_position;
+        let radius = relative.length();
+
+        if follow {
+            if radius.is_finite() && radius > 0.05 {
+                crate::game::chetars_spatial_gui::set_panel_distance(radius as f32);
+                let direction = relative / radius;
+                crate::game::chetars_spatial_gui::set_orbit_angles(
+                    direction.x.atan2(-direction.z),
+                    direction.y.clamp(-1.0, 1.0).asin(),
+                );
+            }
+        } else {
+            let (orbit_yaw, orbit_pitch) = crate::game::chetars_spatial_gui::orbit_angles();
+            let offset = crate::game::chetars_spatial_gui::orbit_offset(
+                orbit_yaw,
+                orbit_pitch,
+                crate::game::chetars_spatial_gui::panel_distance(),
+            );
+            crate::game::chetars_spatial_gui::save_anchor(
+                (camera_position + offset.as_dvec3()).to_array(),
+                saved_rotation,
+            );
+        }
+    }
+
+    let distance_dirty = crate::game::chetars_spatial_gui::take_distance_dirty();
+    let distance = crate::game::chetars_spatial_gui::panel_distance();
+
+    // A distance adjustment moves a pinned panel along its current radial
+    // direction. Follow mode derives the same point from the saved player offset.
     if distance_dirty
         && !follow
         && !crate::game::chetars_spatial_gui::is_dragging()
@@ -69,24 +100,41 @@ fn world_submit(
             (camera_position + direction * distance as f64).to_array(),
             rotation,
         );
+        let normal = relative.normalize_or_zero();
+        if normal.length_squared() > 0.5 {
+            crate::game::chetars_spatial_gui::set_orbit_angles(
+                normal.x.atan2(-normal.z),
+                normal.y.clamp(-1.0, 1.0).asin(),
+            );
+        }
     }
 
-    let (panel_position, panel_rotation) = if follow {
+    let panel_position = if follow {
         let (orbit_yaw, orbit_pitch) = crate::game::chetars_spatial_gui::orbit_angles();
         let world_offset = crate::game::chetars_spatial_gui::orbit_offset(
             orbit_yaw,
             orbit_pitch,
             distance,
         );
-        let (_, fixed_rotation) = crate::game::chetars_spatial_gui::anchor();
-        (
-            camera_position + world_offset.as_dvec3(),
-            fixed_rotation,
-        )
+        camera_position + world_offset.as_dvec3()
     } else {
-        let (position, rotation) = crate::game::chetars_spatial_gui::anchor();
-        (glam::DVec3::from_array(position), rotation)
+        let (position, _) = crate::game::chetars_spatial_gui::anchor();
+        glam::DVec3::from_array(position)
     };
+
+    // The front face (+Z in panel-local space) always points directly at the
+    // player's current position. This lets the player walk around an orbiting
+    // panel and still see/click its controls instead of getting stuck behind it.
+    let toward_player = (camera_position - panel_position).as_vec3().normalize_or_zero();
+    let toward_player = if toward_player.length_squared() > 0.5 {
+        toward_player
+    } else {
+        current_rotation * glam::Vec3::Z
+    };
+    let face_yaw = toward_player.x.atan2(toward_player.z);
+    let face_pitch = -toward_player.y.clamp(-1.0, 1.0).asin();
+    let panel_rotation = glam::Quat::from_rotation_y(face_yaw)
+        * glam::Quat::from_rotation_x(face_pitch);
 
     let panel_width_pixels = (panel.body[1][0] - panel.body[0][0]).abs().max(1.0);
     let world_per_pixel = (3.6 / panel_width_pixels).clamp(0.001, 0.02);
@@ -441,27 +489,15 @@ fn world_submit(
     };
 
     draw.push();
-    if follow {
-        let (panel_yaw, panel_pitch, panel_roll) =
-            panel_rotation.to_euler(glam::EulerRot::YXZ);
-        draw.rotate_about([0.0, 1.0, 0.0], panel_yaw.to_degrees(), [0.0; 3]);
-        draw.rotate_about([1.0, 0.0, 0.0], panel_pitch.to_degrees(), [0.0; 3]);
-        draw.rotate_about([0.0, 0.0, 1.0], panel_roll.to_degrees(), [0.0; 3]);
-        let (orbit_yaw, orbit_pitch) = crate::game::chetars_spatial_gui::orbit_angles();
-        let local_offset = crate::game::chetars_spatial_gui::orbit_offset(
-            orbit_yaw,
-            orbit_pitch,
-            distance,
-        );
-        draw.translate(local_offset.to_array());
-    } else {
-        let (panel_yaw, panel_pitch, panel_roll) =
-            panel_rotation.to_euler(glam::EulerRot::YXZ);
-        let _ = draw.translate_world(panel_position.to_array());
-        draw.rotate_about([0.0, 1.0, 0.0], panel_yaw.to_degrees(), [0.0; 3]);
-        draw.rotate_about([1.0, 0.0, 0.0], panel_pitch.to_degrees(), [0.0; 3]);
-        draw.rotate_about([0.0, 0.0, 1.0], panel_roll.to_degrees(), [0.0; 3]);
-    }
+    // Use the exact same world position as the ray-hit calculation above.
+    // The old Follow path rotated a local offset after a frozen orientation,
+    // so its rendered position and interactive hit plane diverged.
+    let _ = draw.translate_world(panel_position.to_array());
+    let (panel_yaw, panel_pitch, panel_roll) =
+        panel_rotation.to_euler(glam::EulerRot::YXZ);
+    draw.rotate_about([0.0, 1.0, 0.0], panel_yaw.to_degrees(), [0.0; 3]);
+    draw.rotate_about([1.0, 0.0, 0.0], panel_pitch.to_degrees(), [0.0; 3]);
+    draw.rotate_about([0.0, 0.0, 1.0], panel_roll.to_degrees(), [0.0; 3]);
     draw.scale([world_per_pixel, world_per_pixel, world_per_pixel]);
 
     draw_face(game, draw);
