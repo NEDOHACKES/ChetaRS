@@ -4,7 +4,12 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
     }
 
     if key == "key.keyboard.f6" {
-        crate::game::chetars_spatial_gui::toggle_open();
+        let now_open = crate::game::chetars_spatial_gui::toggle_open();
+        if now_open && crate::game::chetars_spatial_gui::is_2d_mode() {
+            game.capture(false);
+        } else if !now_open {
+            game.capture(true);
+        }
         return;
     }
 
@@ -17,6 +22,7 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
             crate::game::chetars_spatial_gui::close_dropdown();
         } else {
             crate::game::chetars_spatial_gui::close();
+            game.capture(true);
         }
         return;
     }
@@ -59,7 +65,8 @@ fn open_key(game: &mut crate::game::Game<'_>, key: &str, pressed: bool) {
             crate::game::chetars_spatial_gui::save_panel(index);
         }
         "key.keyboard.d" if tab == 2 => {
-            crate::game::chetars_spatial_gui::toggle_2d_mode();
+            let now_2d = crate::game::chetars_spatial_gui::toggle_2d_mode();
+            game.capture(!now_2d);
         }
         _ => {}
     }
