@@ -36,12 +36,17 @@ fn world_submit(
     let distance_dirty = crate::game::chetars_spatial_gui::take_distance_dirty();
     let distance = crate::game::chetars_spatial_gui::panel_distance();
 
-    if !follow && !crate::game::chetars_spatial_gui::anchor_ready() {
+    if !crate::game::chetars_spatial_gui::anchor_ready() {
         let forward = current_rotation * glam::Vec3::NEG_Z;
-        let anchor_position = camera_position + forward.as_dvec3() * distance as f64;
+        let direction = forward.normalize();
+        let anchor_position = camera_position + direction.as_dvec3() * distance as f64;
         crate::game::chetars_spatial_gui::save_anchor(
             anchor_position.to_array(),
             current_rotation,
+        );
+        crate::game::chetars_spatial_gui::set_orbit_angles(
+            direction.x.atan2(-direction.z),
+            direction.y.clamp(-1.0, 1.0).asin(),
         );
     }
 
@@ -68,14 +73,15 @@ fn world_submit(
 
     let (panel_position, panel_rotation) = if follow {
         let (orbit_yaw, orbit_pitch) = crate::game::chetars_spatial_gui::orbit_angles();
-        let local_offset = crate::game::chetars_spatial_gui::orbit_offset(
+        let world_offset = crate::game::chetars_spatial_gui::orbit_offset(
             orbit_yaw,
             orbit_pitch,
             distance,
         );
+        let (_, fixed_rotation) = crate::game::chetars_spatial_gui::anchor();
         (
-            camera_position + (current_rotation * local_offset).as_dvec3(),
-            current_rotation,
+            camera_position + world_offset.as_dvec3(),
+            fixed_rotation,
         )
     } else {
         let (position, rotation) = crate::game::chetars_spatial_gui::anchor();
