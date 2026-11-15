@@ -22,6 +22,11 @@ fn render(
         return;
     }
 
+    // 2D mode is a real screen-space interaction mode. Release the native
+    // pointer capture every frame so the OS cursor remains movable and the
+    // current game.cursor position can be used for hit testing.
+    game.capture(false);
+
     let atlas = &game.gui.atlas;
     let width = batch.width;
     let height = batch.height;
@@ -86,7 +91,8 @@ fn render(
     text(batch, panel_next_x + 8.0, panel_arrow_y + 21.0, ">", 0xFFFFFFFF);
     let mut header_action = if over_prev { 8 } else if over_next { 9 } else { 0 };
 
-    let add_x = x + panel_w - 54.0;
+    let add_x = x + panel_w - 94.0;
+    let close_x = add_x + 40.0;
     let add_y = y + 19.0;
     fill(
         batch,
@@ -102,12 +108,27 @@ fn render(
         { 0xFF33AAFF } else { 0xFF354352 },
     );
     text(batch, add_x + 12.0, add_y + 21.0, "+", 0xFFFFFFFF);
+    let over_close = crate::game::chetars_spatial_gui::panel_count() > 1
+        && pointer[0] >= close_x && pointer[0] <= close_x + 34.0
+        && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
+    fill(
+        batch,
+        close_x,
+        add_y,
+        34.0,
+        30.0,
+        if over_close { 0xFFCC3344 } else { 0xFF354352 },
+    );
+    text(batch, close_x + 11.0, add_y + 21.0, "x", 0xFFFFFFFF);
+
     let over_add = crate::game::chetars_spatial_gui::panel_count()
         < crate::game::chetars_spatial_gui::max_panels()
         && pointer[0] >= add_x && pointer[0] <= add_x + 34.0
         && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
     crate::game::chetars_spatial_gui::set_hovered_add(over_add);
-    if over_add {
+    if over_close {
+        header_action = 10;
+    } else if over_add {
         header_action = 7;
     }
 
