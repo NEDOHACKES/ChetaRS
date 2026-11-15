@@ -498,6 +498,12 @@ pub fn hovered_panel() -> Option<usize> {
     (value < MAX_PANELS as u8).then_some(value as usize)
 }
 
+pub fn set_hovered_panel(index: usize) {
+    if index < MAX_PANELS {
+        HOVERED_PANEL.store(index as u8, Ordering::Relaxed);
+    }
+}
+
 pub fn set_hovered_panel_if_empty(index: usize) -> bool {
     if index >= MAX_PANELS { return false; }
     HOVERED_PANEL.compare_exchange(
