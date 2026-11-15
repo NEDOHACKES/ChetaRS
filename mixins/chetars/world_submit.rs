@@ -426,7 +426,6 @@ fn world_submit(
                     if crate::game::chetars_spatial_gui::hovered_distance_control() == Some(1) { 0xFF33AAFF } else { 0xFF4B5563 });
                 label(game, draw, minus_x + 15.0, distance_y + 25.0, "-", 0xFFFFFFFF);
                 label(game, draw, plus_x + 14.0, distance_y + 25.0, "+", 0xFFFFFFFF);
-                label(game, draw, row_x, distance_y + 58.0, "Mouse wheel on the top bar also changes distance", 0xFF687482);
             }
             _ => {}
         }
