@@ -33,7 +33,7 @@ static HOVERED_DISTANCE: AtomicU8 = AtomicU8::new(u8::MAX);
 static ANCHOR_X: AtomicU64 = AtomicU64::new(0.0f64.to_bits());
 static ANCHOR_Y: AtomicU64 = AtomicU64::new(0.0f64.to_bits());
 static ANCHOR_Z: AtomicU64 = AtomicU64::new(0.0f64.to_bits());
-// Frozen orientation, in quaternion x/y/z/w order.
+// Last saved orientation, in quaternion x/y/z/w order. Rendering computes a live facing rotation.
 static ANCHOR_QX: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ANCHOR_QY: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ANCHOR_QZ: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
