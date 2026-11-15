@@ -1,6 +1,6 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.3.1.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.3.2.
 
 ## Spatial display
 
@@ -12,7 +12,8 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 ## Position and movement
 
 - **Keep at coordinates** is enabled by default. The panel is placed in the world when first shown and then stays at that world position and orientation while you turn your head or walk.
-- Hold **Right Mouse Button** and move/turn the mouse to reposition the panel. The right-click action is consumed while dragging.
+- Aim at the panel's top title bar, then hold **Right Mouse Button** and move/turn the mouse to reposition it. The rest of the panel does not capture RMB, so normal world interactions remain available.
+- The panel is rendered on both sides with readable text from the front and back.
 - **Follow me** moves the panel in front of the current camera and keeps it there.
 - The two position modes are mutually exclusive.
 
