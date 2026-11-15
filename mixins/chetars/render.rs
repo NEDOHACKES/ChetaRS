@@ -157,14 +157,14 @@ fn render(
                 && pointer[1] >= mode_y && pointer[1] <= mode_y + 42.0;
             let mut action = if mode_over { 1 } else { 0 };
             if crate::game::chetars_spatial_gui::dropdown_open() {
-                for (i, (label, option)) in [("FOLLOW", 2u8), ("KEEP", 3u8)].iter().enumerate() {
+                for (i, (label, option)) in [("FOLLOW", 2u8), ("KEEP", 3u8)].into_iter().enumerate() {
                     let oy = mode_y + 48.0 + i as f32 * 36.0;
                     let over = pointer[0] >= row_x + 12.0 && pointer[0] <= row_x + row_w - 12.0
                         && pointer[1] >= oy && pointer[1] <= oy + 32.0;
                     fill(batch, row_x + 12.0, oy, row_w - 24.0, 32.0,
                         if over { 0xFFDCEBFA } else { 0xFFF2F4F7 });
                     text(batch, row_x + 24.0, oy + 21.0, label, 0xFF202833);
-                    if over { action = *option; }
+                    if over { action = option; }
                 }
             }
 
