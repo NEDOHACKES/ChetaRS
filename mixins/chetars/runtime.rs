@@ -91,6 +91,7 @@ static DRAG_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
 static HOVERED_ADD: AtomicBool = AtomicBool::new(false);
 static MODE_DROPDOWN_OPEN: AtomicBool = AtomicBool::new(false);
 static TWO_D_MODE: AtomicBool = AtomicBool::new(false);
+static TWO_D_PROGRESS: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static TWO_D_POINTER_OVER: AtomicBool = AtomicBool::new(false);
 static HOVERED_MODE_ACTION: AtomicU8 = AtomicU8::new(0);
 // Hover actions: 0 none, 1 mode row, 2 Follow, 3 Keep, 4 2D mode,
@@ -607,6 +608,11 @@ pub fn toggle_2d_mode() -> bool {
     let next = !is_2d_mode();
     TWO_D_MODE.store(next, Ordering::Relaxed);
     next
+}
+
+pub fn two_d_progress() -> f32 {
+    let target = if is_2d_mode() { 1.0 } else { 0.0 };
+    step_progress(&TWO_D_PROGRESS, target)
 }
 pub fn set_2d_pointer_over(over: bool) {
     TWO_D_POINTER_OVER.store(over, Ordering::Relaxed);
