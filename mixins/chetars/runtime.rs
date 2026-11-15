@@ -580,7 +580,7 @@ pub fn hovered_add() -> bool {
 }
 
 pub fn set_hovered_mode_action(action: u8) {
-    HOVERED_MODE_ACTION.store(action.min(9), Ordering::Relaxed);
+    HOVERED_MODE_ACTION.store(action.min(10), Ordering::Relaxed);
 }
 
 pub fn hovered_mode_action() -> u8 {
