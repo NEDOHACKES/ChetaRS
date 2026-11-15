@@ -10,14 +10,30 @@ fn mouse_button(
     // A captured RMB drag belongs to the panel selected at the moment it began.
     if button == 1 && !pressed {
         let was_dragging = crate::game::chetars_spatial_gui::is_dragging();
+        let over_2d = crate::game::chetars_spatial_gui::is_2d_mode()
+            && crate::game::chetars_spatial_gui::two_d_pointer_over();
         crate::game::chetars_spatial_gui::set_dragging(false);
-        if was_dragging {
+        if was_dragging || over_2d {
             *canceled = true;
         }
         return;
     }
 
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
+        return;
+    }
+
+    let in_2d_panel = crate::game::chetars_spatial_gui::is_2d_mode()
+        && crate::game::chetars_spatial_gui::two_d_pointer_over();
+    if crate::game::chetars_spatial_gui::is_2d_mode() && !in_2d_panel {
+        return;
+    }
+    if in_2d_panel && button != 0 {
+        *canceled = true;
+        return;
+    }
+    if in_2d_panel && button == 0 && !pressed {
+        *canceled = true;
         return;
     }
 
@@ -92,4 +108,8 @@ fn mouse_button(
         _ => {}
     }
     crate::game::chetars_spatial_gui::save_panel(index);
+    if in_2d_panel {
+        // Clicks in the 2D window belong to the panel, never to the world behind it.
+        *canceled = true;
+    }
 }
