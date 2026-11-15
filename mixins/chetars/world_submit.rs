@@ -199,7 +199,8 @@ fn world_submit(
         && crate::game::chetars_spatial_gui::set_hovered_panel_if_closer(panel_index, hit_depth);
     if is_primary_hit {
         if let Some([screen_x, screen_y]) = hit {
-            let plus_x = panel.header[1][0] - 48.0;
+            let plus_x = panel.header[1][0] - 72.0;
+            let close_x = plus_x + 40.0;
             let plus_y = panel.header[0][1] + 8.0;
             let over_add = crate::game::chetars_spatial_gui::panel_count()
                 < crate::game::chetars_spatial_gui::max_panels()
