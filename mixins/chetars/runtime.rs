@@ -21,6 +21,7 @@ static OPEN: AtomicBool = AtomicBool::new(false);
 // The default mode is pinned to a world position. Follow mode is opt-in.
 static FOLLOW_MODE: AtomicBool = AtomicBool::new(false);
 static DRAGGING: AtomicBool = AtomicBool::new(false);
+static DRAG_HOVERED: AtomicBool = AtomicBool::new(false);
 static ANCHOR_READY: AtomicBool = AtomicBool::new(false);
 static LAST_VIEW_READY: AtomicBool = AtomicBool::new(false);
 static HOVERED_SETTING: AtomicU8 = AtomicU8::new(u8::MAX);
@@ -54,6 +55,7 @@ pub fn toggle_open() -> bool {
     OPEN.store(next, Ordering::Relaxed);
     if !next {
         DRAGGING.store(false, Ordering::Relaxed);
+        DRAG_HOVERED.store(false, Ordering::Relaxed);
         HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
     }
@@ -63,6 +65,7 @@ pub fn toggle_open() -> bool {
 pub fn close() {
     OPEN.store(false, Ordering::Relaxed);
     DRAGGING.store(false, Ordering::Relaxed);
+    DRAG_HOVERED.store(false, Ordering::Relaxed);
     HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
 }
@@ -80,6 +83,7 @@ pub fn set_follow_mode(follow: bool) {
         FOLLOW_OFFSET_Y.store(0.0f32.to_bits(), Ordering::Relaxed);
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
         DRAGGING.store(false, Ordering::Relaxed);
+        DRAG_HOVERED.store(false, Ordering::Relaxed);
     }
     SETTINGS_SELECTED.store(if follow { 1 } else { 0 }, Ordering::Relaxed);
 }
@@ -123,6 +127,15 @@ pub fn set_dragging(dragging: bool) {
 
 pub fn is_dragging() -> bool {
     DRAGGING.load(Ordering::Relaxed)
+}
+
+/// True only while the crosshair is over the panel's top title bar.
+pub fn set_drag_hovered(hovered: bool) {
+    DRAG_HOVERED.store(hovered, Ordering::Relaxed);
+}
+
+pub fn can_drag_from_header() -> bool {
+    DRAG_HOVERED.load(Ordering::Relaxed)
 }
 
 pub fn set_hovered_setting(index: Option<usize>) {
@@ -243,12 +256,12 @@ pub fn update_drag_view(yaw: f32, pitch: f32, distance: f32) {
             let pitch_delta = pitch - last_pitch;
             let speed = distance * 1.35;
             if follow_mode() {
-                move_follow_offset(yaw_delta * speed, -pitch_delta * speed);
+                move_follow_offset(-yaw_delta * speed, pitch_delta * speed);
             } else {
                 let (_, rotation) = anchor();
                 let right = rotation * glam::Vec3::X;
                 let up = rotation * glam::Vec3::Y;
-                let shift = right * (yaw_delta * speed) + up * (-pitch_delta * speed);
+                let shift = right * (-yaw_delta * speed) + up * (pitch_delta * speed);
                 move_anchor([
                     shift.x as f64,
                     shift.y as f64,
