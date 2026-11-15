@@ -87,8 +87,8 @@ fn render(
     let mut header_action = if over_prev { 8 } else if over_next { 9 } else { 0 };
 
     let add_x = x + panel_w - 94.0;
-    let close_x = add_x + 40.0;
     let add_y = y + 19.0;
+    let close_button_x = add_x + 40.0;
     fill(
         batch,
         add_x,
@@ -104,17 +104,17 @@ fn render(
     );
     text(batch, add_x + 12.0, add_y + 21.0, "+", 0xFFFFFFFF);
     let over_close = crate::game::chetars_spatial_gui::panel_count() > 1
-        && pointer[0] >= close_x && pointer[0] <= close_x + 34.0
+        && pointer[0] >= add_x + 40.0 && pointer[0] <= add_x + 74.0
         && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
     fill(
         batch,
-        close_x,
+        add_x + 40.0,
         add_y,
         34.0,
         30.0,
         if over_close { 0xFFCC3344 } else { 0xFF354352 },
     );
-    text(batch, close_x + 11.0, add_y + 21.0, "x", 0xFFFFFFFF);
+    text(batch, add_x + 51.0, add_y + 21.0, "x", 0xFFFFFFFF);
 
     let over_add = crate::game::chetars_spatial_gui::panel_count()
         < crate::game::chetars_spatial_gui::max_panels()
