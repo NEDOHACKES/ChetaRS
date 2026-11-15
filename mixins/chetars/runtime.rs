@@ -95,6 +95,7 @@ pub fn toggle_open() -> bool {
     OPEN.store(next, Ordering::Relaxed);
     if !next {
         DRAGGING.store(false, Ordering::Relaxed);
+        DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
         DRAG_HOVERED.store(false, Ordering::Relaxed);
         HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
         HOVERED_NAVIGATION.store(u8::MAX, Ordering::Relaxed);
@@ -108,6 +109,7 @@ pub fn toggle_open() -> bool {
 pub fn close() {
     OPEN.store(false, Ordering::Relaxed);
     DRAGGING.store(false, Ordering::Relaxed);
+    DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
     DRAG_HOVERED.store(false, Ordering::Relaxed);
     HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
     HOVERED_NAVIGATION.store(u8::MAX, Ordering::Relaxed);
@@ -129,6 +131,7 @@ pub fn set_follow_mode(follow: bool) {
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
         DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
         DRAGGING.store(false, Ordering::Relaxed);
+        DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
         DRAG_HOVERED.store(false, Ordering::Relaxed);
     }
     SETTINGS_SELECTED.store(if follow { 1 } else { 0 }, Ordering::Relaxed);
@@ -592,8 +595,6 @@ pub fn load_panel(index: usize) {
     ORBIT_PITCH.store(PANEL_ORBIT_PITCH[index].load(Ordering::Relaxed), Ordering::Relaxed);
     PANEL_DISTANCE.store(PANEL_DISTANCE[index].load(Ordering::Relaxed), Ordering::Relaxed);
     DRAGGING.store(DRAG_PANEL.load(Ordering::Relaxed) == index as u8, Ordering::Relaxed);
-    LAST_VIEW_READY.store(false, Ordering::Relaxed);
-    DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
 }
 
 pub fn save_panel(index: usize) {
