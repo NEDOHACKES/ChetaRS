@@ -21,8 +21,8 @@ fn mouse_button(
         return;
     }
 
-    // GLFW button 1 is RMB. It starts a drag only when the crosshair is over
-    // the full-width title bar; elsewhere Minecraft keeps its normal use action.
+    // Start orbit dragging only from the top title bar, preserving RMB block use
+    // everywhere else in the world.
     if button == 1 && pressed {
         if crate::game::chetars_spatial_gui::can_drag_from_header() {
             crate::game::chetars_spatial_gui::set_dragging(true);
@@ -31,14 +31,28 @@ fn mouse_button(
         return;
     }
 
-    // Left-click the settings row under the center crosshair to change mode.
-    if button == 0
-        && pressed
-        && crate::game::chetars_spatial_gui::selected_button() == 2
-    {
+    if button != 0 || !pressed {
+        return;
+    }
+
+    // Sidebar tabs were previously visual only. They now change the active
+    // catalogue page when the crosshair is aimed at a tab.
+    if let Some(index) = crate::game::chetars_spatial_gui::hovered_navigation() {
+        crate::game::chetars_spatial_gui::select_button(index);
+        *canceled = true;
+        return;
+    }
+
+    if crate::game::chetars_spatial_gui::selected_button() == 2 {
         if let Some(index) = crate::game::chetars_spatial_gui::hovered_setting() {
             crate::game::chetars_spatial_gui::select_setting(index);
             crate::game::chetars_spatial_gui::set_follow_mode(index == 1);
+            *canceled = true;
+            return;
+        }
+
+        if let Some(index) = crate::game::chetars_spatial_gui::hovered_distance_control() {
+            crate::game::chetars_spatial_gui::adjust_panel_distance(if index == 0 { -0.25 } else { 0.25 });
             *canceled = true;
         }
     }
