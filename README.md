@@ -5,7 +5,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 ## Spatial display
 
 - Press **F6** to show or hide the floating display.
-- The panel is a camera-facing 3D display drawn through Horizon's native world-canvas API.
+- The panel is a floating 3D display drawn through Horizon's native world-canvas API.
 - The content area is a white canvas with the mod's function catalogue, placement profile and settings rendered over it. No player inventory, container slots, item stacks or inventory texture are used.
 - The display has a dark frame, side navigation, shadow and animated settings switches.
 
@@ -15,7 +15,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 - Aim at the panel's top title bar, then hold **Right Mouse Button** and turn the camera to orbit the panel around you horizontally and vertically. Release RMB to leave it at the new world position.
 - Scroll the mouse wheel while aiming at the top bar to move the panel closer or farther away. In Settings, the **- / +** controls and keyboard keys also change distance.
 - The panel is rendered on both sides with readable text from the front and back.
-- **Follow me** keeps the panel at the selected orbit and distance relative to the camera; **Keep at coordinates** leaves it fixed in the world after dragging.
+- **Follow me** follows the player's position at the selected orbit and distance while keeping the panel's world orientation; **Keep at coordinates** leaves it fixed in the world after dragging.
 - The two position modes are mutually exclusive.
 
 ## Sections and controls
