@@ -69,6 +69,23 @@ fn render(
         0xFFB8C4D0,
     );
 
+    // In 2D mode the world panels are hidden, so compact previous/next
+    // controls let the user select which independent panel is being edited.
+    let panel_prev_x = x + 270.0;
+    let panel_next_x = x + 304.0;
+    let panel_arrow_y = y + 18.0;
+    let over_prev = pointer[0] >= panel_prev_x && pointer[0] <= panel_prev_x + 26.0
+        && pointer[1] >= panel_arrow_y && pointer[1] <= panel_arrow_y + 30.0;
+    let over_next = pointer[0] >= panel_next_x && pointer[0] <= panel_next_x + 26.0
+        && pointer[1] >= panel_arrow_y && pointer[1] <= panel_arrow_y + 30.0;
+    fill(batch, panel_prev_x, panel_arrow_y, 26.0, 30.0,
+        if over_prev { 0xFF33AAFF } else { 0xFF354352 });
+    fill(batch, panel_next_x, panel_arrow_y, 26.0, 30.0,
+        if over_next { 0xFF33AAFF } else { 0xFF354352 });
+    text(batch, panel_prev_x + 8.0, panel_arrow_y + 21.0, "<", 0xFFFFFFFF);
+    text(batch, panel_next_x + 8.0, panel_arrow_y + 21.0, ">", 0xFFFFFFFF);
+    let mut header_action = if over_prev { 8 } else if over_next { 9 } else { 0 };
+
     let add_x = x + panel_w - 54.0;
     let add_y = y + 19.0;
     fill(
@@ -91,7 +108,7 @@ fn render(
         && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
     crate::game::chetars_spatial_gui::set_hovered_add(over_add);
     if over_add {
-        crate::game::chetars_spatial_gui::set_hovered_mode_action(7);
+        header_action = 7;
     }
 
     let tabs = ["HOME", "PROFILE", "SETTINGS"];
@@ -203,9 +220,13 @@ fn render(
                 if pointer[0] >= minus_x && pointer[0] <= minus_x + 34.0 { action = 5; }
                 if pointer[0] >= plus_x && pointer[0] <= plus_x + 34.0 { action = 6; }
             }
-            crate::game::chetars_spatial_gui::set_hovered_mode_action(if over_add { 7 } else { action });
+            crate::game::chetars_spatial_gui::set_hovered_mode_action(
+                if header_action != 0 { header_action } else { action }
+            );
         }
-        _ => {}
+        _ => {
+            crate::game::chetars_spatial_gui::set_hovered_mode_action(header_action);
+        }
     }
 
     crate::game::chetars_spatial_gui::save_panel(selected);
