@@ -82,7 +82,7 @@ static PANEL_QZ: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bit
 static PANEL_QW: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(1.0f32.to_bits()) }; MAX_PANELS];
 static PANEL_ORBIT_YAW: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
 static PANEL_ORBIT_PITCH: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(0.0f32.to_bits()) }; MAX_PANELS];
-static PANEL_DISTANCE: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(2.25f32.to_bits()) }; MAX_PANELS];
+static PANEL_DISTANCES: [AtomicU32; MAX_PANELS] = [const { AtomicU32::new(2.25f32.to_bits()) }; MAX_PANELS];
 
 static SELECTED_PANEL: AtomicU8 = AtomicU8::new(0);
 static HOVERED_PANEL: AtomicU8 = AtomicU8::new(NO_PANEL);
@@ -586,7 +586,7 @@ pub fn add_panel() -> Option<usize> {
     PANEL_QW[index].store(1.0f32.to_bits(), Ordering::Relaxed);
     PANEL_ORBIT_YAW[index].store(0.0f32.to_bits(), Ordering::Relaxed);
     PANEL_ORBIT_PITCH[index].store(0.0f32.to_bits(), Ordering::Relaxed);
-    PANEL_DISTANCE[index].store(2.25f32.to_bits(), Ordering::Relaxed);
+    PANEL_DISTANCES[index].store(2.25f32.to_bits(), Ordering::Relaxed);
     SELECTED_PANEL.store(index as u8, Ordering::Relaxed);
     MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
     Some(index)
@@ -607,7 +607,7 @@ pub fn load_panel(index: usize) {
     ANCHOR_QW.store(PANEL_QW[index].load(Ordering::Relaxed), Ordering::Relaxed);
     ORBIT_YAW.store(PANEL_ORBIT_YAW[index].load(Ordering::Relaxed), Ordering::Relaxed);
     ORBIT_PITCH.store(PANEL_ORBIT_PITCH[index].load(Ordering::Relaxed), Ordering::Relaxed);
-    PANEL_DISTANCE.store(PANEL_DISTANCE[index].load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_DISTANCE.store(PANEL_DISTANCES[index].load(Ordering::Relaxed), Ordering::Relaxed);
     DRAGGING.store(DRAG_PANEL.load(Ordering::Relaxed) == index as u8, Ordering::Relaxed);
 }
 
@@ -626,5 +626,5 @@ pub fn save_panel(index: usize) {
     PANEL_QW[index].store(ANCHOR_QW.load(Ordering::Relaxed), Ordering::Relaxed);
     PANEL_ORBIT_YAW[index].store(ORBIT_YAW.load(Ordering::Relaxed), Ordering::Relaxed);
     PANEL_ORBIT_PITCH[index].store(ORBIT_PITCH.load(Ordering::Relaxed), Ordering::Relaxed);
-    PANEL_DISTANCE[index].store(PANEL_DISTANCE.load(Ordering::Relaxed), Ordering::Relaxed);
+    PANEL_DISTANCES[index].store(PANEL_DISTANCE.load(Ordering::Relaxed), Ordering::Relaxed);
 }
