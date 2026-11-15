@@ -376,39 +376,70 @@ pub fn set_anchor_position(position: [f64; 3]) {
 pub fn update_drag_view(yaw: f32, pitch: f32, camera_position: [f64; 3]) {
     let camera = glam::DVec3::from_array(camera_position);
 
-    if is_dragging() {
-        if !DRAG_ORBIT_READY.load(Ordering::Relaxed) {
-            if !follow_mode() && anchor_ready() {
-                let (position, _) = anchor();
-                let relative = glam::DVec3::from_array(position) - camera;
-                let radius = relative.length();
-                if radius.is_finite() && radius > 0.05 {
-                    PANEL_DISTANCE.store((radius as f32).clamp(1.0, 8.0).to_bits(), Ordering::Relaxed);
-                    ORBIT_YAW.store((relative.x.atan2(-relative.z) as f32).to_bits(), Ordering::Relaxed);
-                    ORBIT_PITCH.store(((relative.y / radius).clamp(-1.0, 1.0).asin() as f32).to_bits(), Ordering::Relaxed);
-                }
-            }
-            DRAG_ORBIT_READY.store(true, Ordering::Relaxed);
+    if !is_dragging() {
+        LAST_VIEW_READY.store(false, Ordering::Relaxed);
+        DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
+        return;
+    }
+
+    // Initialize the orbit from the panel's actual current position for BOTH
+    // Follow and Keep. The old code only initialized Keep, so entering Follow
+    // could reuse stale yaw/pitch and make the first RMB movement jump.
+    if !DRAG_ORBIT_READY.load(Ordering::Relaxed) {
+        let current_position = if follow_mode() {
+            let (orbit_yaw, orbit_pitch) = orbit_angles();
+            camera + orbit_offset(orbit_yaw, orbit_pitch, panel_distance()).as_dvec3()
+        } else if anchor_ready() {
+            glam::DVec3::from_array(anchor().0)
+        } else {
+            camera + (glam::Vec3::NEG_Z * panel_distance()).as_dvec3()
+        };
+
+        let relative = current_position - camera;
+        let radius = relative.length();
+        if radius.is_finite() && radius > 0.05 {
+            let clamped_radius = (radius as f32).clamp(1.0, 8.0);
+            PANEL_DISTANCE.store(clamped_radius.to_bits(), Ordering::Relaxed);
+            let direction = relative / radius;
+            ORBIT_YAW.store(
+                (direction.x.atan2(-direction.z) as f32).rem_euclid(std::f32::consts::TAU).to_bits(),
+                Ordering::Relaxed,
+            );
+            ORBIT_PITCH.store(
+                (direction.y.clamp(-1.0, 1.0).asin() as f32).clamp(-1.35, 1.35).to_bits(),
+                Ordering::Relaxed,
+            );
+        }
+        DRAG_ORBIT_READY.store(true, Ordering::Relaxed);
+    }
+
+    if LAST_VIEW_READY.load(Ordering::Relaxed) {
+        let last_yaw = f32::from_bits(LAST_YAW.load(Ordering::Relaxed));
+        let last_pitch = f32::from_bits(LAST_PITCH.load(Ordering::Relaxed));
+
+        // Use shortest-angle deltas so crossing +/-PI never causes a full spin.
+        let mut yaw_delta = yaw - last_yaw;
+        if yaw_delta > std::f32::consts::PI {
+            yaw_delta -= std::f32::consts::TAU;
+        } else if yaw_delta < -std::f32::consts::PI {
+            yaw_delta += std::f32::consts::TAU;
         }
 
-        if LAST_VIEW_READY.load(Ordering::Relaxed) {
-            let last_yaw = f32::from_bits(LAST_YAW.load(Ordering::Relaxed));
-            let last_pitch = f32::from_bits(LAST_PITCH.load(Ordering::Relaxed));
-            let mut yaw_delta = yaw - last_yaw;
-            if yaw_delta > std::f32::consts::PI {
-                yaw_delta -= std::f32::consts::TAU;
-            } else if yaw_delta < -std::f32::consts::PI {
-                yaw_delta += std::f32::consts::TAU;
-            }
-            let pitch_delta = pitch - last_pitch;
-            let (old_yaw, old_pitch) = orbit_angles();
-            let next_yaw = (old_yaw - yaw_delta).rem_euclid(std::f32::consts::TAU);
-            let next_pitch = (old_pitch + pitch_delta).clamp(-1.35, 1.35);
-            ORBIT_YAW.store(next_yaw.to_bits(), Ordering::Relaxed);
-            ORBIT_PITCH.store(next_pitch.to_bits(), Ordering::Relaxed);
+        let pitch_delta = pitch - last_pitch;
+        let (old_yaw, old_pitch) = orbit_angles();
+        let next_yaw = (old_yaw - yaw_delta).rem_euclid(std::f32::consts::TAU);
+        let next_pitch = (old_pitch + pitch_delta).clamp(-1.35, 1.35);
 
-            let offset = orbit_offset(next_yaw, next_pitch, panel_distance()).as_dvec3();
-            set_anchor_position((camera + offset).to_array());
+        ORBIT_YAW.store(next_yaw.to_bits(), Ordering::Relaxed);
+        ORBIT_PITCH.store(next_pitch.to_bits(), Ordering::Relaxed);
+
+        // Follow: the orbit is relative to the player/camera every frame.
+        // Keep: write the same orbit back to the world anchor, so releasing
+        // RMB leaves the panel exactly where the user rotated it.
+        let offset = orbit_offset(next_yaw, next_pitch, panel_distance()).as_dvec3();
+        let next_position = camera + offset;
+        if !follow_mode() {
+            set_anchor_position(next_position.to_array());
         }
     }
 
@@ -607,6 +638,17 @@ pub fn is_2d_mode() -> bool {
 pub fn toggle_2d_mode() -> bool {
     let next = !is_2d_mode();
     TWO_D_MODE.store(next, Ordering::Relaxed);
+    // Reset transient input state when switching presentation modes so a
+    // pressed/dragged menu cannot remain "stuck" after the toggle.
+    DRAGGING.store(false, Ordering::Relaxed);
+    DRAG_PANEL.store(NO_PANEL, Ordering::Relaxed);
+    DRAG_HOVERED.store(false, Ordering::Relaxed);
+    TWO_D_POINTER_OVER.store(next, Ordering::Relaxed);
+    MODE_DROPDOWN_OPEN.store(false, Ordering::Relaxed);
+    HOVERED_MODE_ACTION.store(0, Ordering::Relaxed);
+    HOVERED_ADD.store(false, Ordering::Relaxed);
+    LAST_VIEW_READY.store(false, Ordering::Relaxed);
+    DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
     next
 }
 
