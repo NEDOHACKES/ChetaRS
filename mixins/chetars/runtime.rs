@@ -38,7 +38,7 @@ static ANCHOR_QY: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ANCHOR_QZ: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ANCHOR_QW: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 
-// Orbit is expressed in world space for pinned mode and camera-local space for follow mode.
+// Orbit is world-relative; Follow mode carries the same offset along with the player.
 static ORBIT_YAW: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ORBIT_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static PANEL_DISTANCE: AtomicU32 = AtomicU32::new(2.25f32.to_bits());
@@ -292,6 +292,13 @@ pub fn orbit_angles() -> (f32, f32) {
     )
 }
 
+pub fn set_orbit_angles(yaw: f32, pitch: f32) {
+    if yaw.is_finite() && pitch.is_finite() {
+        ORBIT_YAW.store(yaw.to_bits(), Ordering::Relaxed);
+        ORBIT_PITCH.store(pitch.clamp(-1.35, 1.35).to_bits(), Ordering::Relaxed);
+    }
+}
+
 pub fn orbit_offset(yaw: f32, pitch: f32, distance: f32) -> glam::Vec3 {
     let horizontal = pitch.cos() * distance;
     glam::Vec3::new(
@@ -314,7 +321,7 @@ pub fn update_drag_view(yaw: f32, pitch: f32, camera_position: [f64; 3]) {
 
     if is_dragging() {
         if !DRAG_ORBIT_READY.load(Ordering::Relaxed) {
-            if !follow_mode() && anchor_ready() {
+            if anchor_ready() {
                 let (position, _) = anchor();
                 let relative = glam::DVec3::from_array(position) - camera;
                 let radius = relative.length();
@@ -343,10 +350,8 @@ pub fn update_drag_view(yaw: f32, pitch: f32, camera_position: [f64; 3]) {
             ORBIT_YAW.store(next_yaw.to_bits(), Ordering::Relaxed);
             ORBIT_PITCH.store(next_pitch.to_bits(), Ordering::Relaxed);
 
-            if !follow_mode() {
-                let offset = orbit_offset(next_yaw, next_pitch, panel_distance()).as_dvec3();
-                set_anchor_position((camera + offset).to_array());
-            }
+            let offset = orbit_offset(next_yaw, next_pitch, panel_distance()).as_dvec3();
+            set_anchor_position((camera + offset).to_array());
         }
     }
 
