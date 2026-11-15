@@ -175,7 +175,7 @@ fn world_submit(
 
     // SETTINGS: two mutually exclusive animated switches.
     if crate::game::chetars_spatial_gui::selected_button() == 2 {
-        let (pin_progress, follow_progress) =
+        let [pin_progress, follow_progress] =
             crate::game::chetars_spatial_gui::advance_switch_animations();
         let left = panel.white_area[0][0];
         let top = panel.white_area[0][1];
