@@ -321,7 +321,7 @@ pub fn update_drag_view(yaw: f32, pitch: f32, camera_position: [f64; 3]) {
 
     if is_dragging() {
         if !DRAG_ORBIT_READY.load(Ordering::Relaxed) {
-            if anchor_ready() {
+            if !follow_mode() && anchor_ready() {
                 let (position, _) = anchor();
                 let relative = glam::DVec3::from_array(position) - camera;
                 let radius = relative.length();
