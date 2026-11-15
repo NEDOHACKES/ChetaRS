@@ -26,7 +26,7 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 
 - Aim at **HOME**, **PROFILE**, or **SETTINGS** in the left navigation and left-click.
 - **SETTINGS → Follow / Keep** opens a small list with the two choices. They are mutually exclusive for the selected panel.
-- **2D Panel** is a separate setting. It hides all world-space 3D panels and shows a screen-space 2D window. The mouse cursor is released while 2D mode is active; switching back to 3D restores mouse-look.
+- **2D Panel** is a separate setting. It hides all world-space 3D panels and shows a screen-space 2D window. The mouse cursor is released while 2D mode is active; switching back to 3D restores mouse-look. Use the header's **< / >** arrows to choose which panel to configure in 2D mode.
 - **F7** also switches between 2D and 3D while the panel is open.
 - **F6** shows or hides the interface; **Escape** closes it.
 
