@@ -23,11 +23,10 @@ fn mouse_button(
         return;
     }
 
-    let in_2d_panel = crate::game::chetars_spatial_gui::is_2d_mode()
-        && crate::game::chetars_spatial_gui::two_d_pointer_over();
-    if crate::game::chetars_spatial_gui::is_2d_mode() && !in_2d_panel {
-        return;
-    }
+    // 2D mode owns the whole input layer, not only the opaque rectangle.
+    // This avoids losing clicks when the cursor is on the shadow/margin and
+    // prevents the world behind the menu from receiving a click.
+    let in_2d_panel = crate::game::chetars_spatial_gui::is_2d_mode();
     if in_2d_panel && button != 0 {
         *canceled = true;
         return;
@@ -125,7 +124,12 @@ fn mouse_button(
     }
     crate::game::chetars_spatial_gui::save_panel(index);
     if in_2d_panel {
-        // Clicks in the 2D window belong to the panel, never to the world behind it.
+        // A click that does not hit a control is still consumed by the 2D
+        // window. If a dropdown is open, clicking empty space closes it
+        // instead of leaving the menu visually stuck.
+        if crate::game::chetars_spatial_gui::hovered_mode_action() == 0 {
+            crate::game::chetars_spatial_gui::close_dropdown();
+        }
         *canceled = true;
     }
 }
