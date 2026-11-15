@@ -146,15 +146,15 @@ fn world_submit(
     // Follow panels face the player so their controls stay accessible.
     // Keep panels preserve the exact orientation saved when they were placed.
     let panel_rotation = if follow {
+        // Keep the panel upright while Follow moves it through the full vertical
+        // orbit. Only yaw follows the player; camera pitch must not tilt the UI.
         let toward_player = (camera_position - panel_position).as_vec3().normalize_or_zero();
-        let toward_player = if toward_player.length_squared() > 0.5 {
-            toward_player
+        let face_yaw = if toward_player.length_squared() > 0.5 {
+            toward_player.x.atan2(toward_player.z)
         } else {
-            current_rotation * glam::Vec3::Z
+            camera_yaw
         };
-        let face_yaw = toward_player.x.atan2(toward_player.z);
-        let face_pitch = -toward_player.y.clamp(-1.0, 1.0).asin();
-        glam::Quat::from_rotation_y(face_yaw) * glam::Quat::from_rotation_x(face_pitch)
+        glam::Quat::from_rotation_y(face_yaw)
     } else {
         crate::game::chetars_spatial_gui::anchor().1
     };
@@ -204,6 +204,9 @@ fn world_submit(
             let over_add = crate::game::chetars_spatial_gui::panel_count()
                 < crate::game::chetars_spatial_gui::max_panels()
                 && screen_x >= plus_x && screen_x <= plus_x + 34.0
+                && screen_y >= plus_y && screen_y <= plus_y + 30.0;
+            let over_close = crate::game::chetars_spatial_gui::panel_count() > 1
+                && screen_x >= close_x && screen_x <= close_x + 34.0
                 && screen_y >= plus_y && screen_y <= plus_y + 30.0;
             crate::game::chetars_spatial_gui::set_hovered_add(over_add);
             let drag_hover = !over_add
@@ -264,7 +267,9 @@ fn world_submit(
                     && screen_x >= plus_x && screen_x <= plus_x + 42.0
                 { action = 6; }
             }
-            crate::game::chetars_spatial_gui::set_hovered_mode_action(if over_add { 7 } else { action });
+            crate::game::chetars_spatial_gui::set_hovered_mode_action(
+                if over_close { 10 } else if over_add { 7 } else { action }
+            );
         }
     }
 
@@ -331,7 +336,8 @@ fn world_submit(
         paint(game, draw, panel.body, 0xFF101010);
         paint(game, draw, panel.inner, 0xFF1E1E1E);
         paint(game, draw, panel.header, 0xFF101010);
-        let plus_x = panel.header[1][0] - 48.0;
+        let plus_x = panel.header[1][0] - 72.0;
+        let close_x = plus_x + 40.0;
         let plus_y = panel.header[0][1] + 8.0;
         let can_add = crate::game::chetars_spatial_gui::panel_count()
             < crate::game::chetars_spatial_gui::max_panels();
@@ -345,6 +351,15 @@ fn world_submit(
             { 0xFF33AAFF } else { 0xFF303844 },
         );
         label(game, draw, plus_x + 12.0, plus_y + 21.0, "+", 0xFFFFFFFF);
+        paint(
+            game,
+            draw,
+            rect(close_x, plus_y, 34.0, 30.0, 12.0),
+            if crate::game::chetars_spatial_gui::hovered_panel() == Some(panel_index)
+                && crate::game::chetars_spatial_gui::hovered_mode_action() == 10
+            { 0xFFCC3344 } else { 0xFF303844 },
+        );
+        label(game, draw, close_x + 11.0, plus_y + 21.0, "x", 0xFFFFFFFF);
         paint(game, draw, panel.sidebar, 0xFF1E1E1E);
         paint(game, draw, panel.content_frame, 0xFF4A4A4A);
         paint(game, draw, panel.white_area, 0xFFFFFFFF);
