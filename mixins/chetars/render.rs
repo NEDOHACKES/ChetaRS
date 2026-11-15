@@ -88,7 +88,6 @@ fn render(
 
     let add_x = x + panel_w - 94.0;
     let add_y = y + 19.0;
-    let close_button_x = add_x + 40.0;
     fill(
         batch,
         add_x,
