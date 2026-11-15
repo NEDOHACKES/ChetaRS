@@ -31,16 +31,28 @@ fn draw_panel(
 
     if !crate::game::chetars_spatial_gui::anchor_ready() {
         let forward = (current_rotation * glam::Vec3::NEG_Z).normalize();
-        let anchor_position = camera_position + forward.as_dvec3()
+        let base_yaw = forward.x.atan2(-forward.z);
+        let spread = if panel_index == 0 {
+            0.0
+        } else if panel_index % 2 == 1 {
+            ((panel_index + 1) / 2) as f32 * 0.72
+        } else {
+            -((panel_index / 2) as f32) * 0.72
+        };
+        let spawn_yaw = base_yaw + spread;
+        let spawn_pitch = forward.y.clamp(-1.0, 1.0).asin();
+        let spawn_direction = crate::game::chetars_spatial_gui::orbit_offset(
+            spawn_yaw,
+            spawn_pitch,
+            1.0,
+        ).normalize();
+        let anchor_position = camera_position + spawn_direction.as_dvec3()
             * crate::game::chetars_spatial_gui::panel_distance() as f64;
         crate::game::chetars_spatial_gui::save_anchor(
             anchor_position.to_array(),
             current_rotation,
         );
-        crate::game::chetars_spatial_gui::set_orbit_angles(
-            forward.x.atan2(-forward.z),
-            forward.y.clamp(-1.0, 1.0).asin(),
-        );
+        crate::game::chetars_spatial_gui::set_orbit_angles(spawn_yaw, spawn_pitch);
     }
 
     // Switching modes must not snap the panel. Capture its current world
@@ -145,12 +157,10 @@ fn draw_panel(
     let ray_direction = current_rotation * glam::Vec3::NEG_Z;
     let panel_normal = panel_rotation * glam::Vec3::Z;
     let denominator = ray_direction.dot(panel_normal);
-    let mut hit_distance = None;
     let hit = if denominator.abs() > 0.0001 {
         let to_panel = panel_position - camera_position;
         let t = to_panel.dot(panel_normal.as_dvec3()) / denominator as f64;
         if t > 0.0 && t.is_finite() {
-            hit_distance = Some(t as f32);
             let world_hit = camera_position + ray_direction.as_dvec3() * t;
             let local_hit =
                 panel_rotation.inverse() * (world_hit - panel_position).as_vec3();
