@@ -8,9 +8,12 @@ fn render(
 
     if !focused {
         crate::game::chetars_spatial_gui::set_dragging(false);
+        crate::game::chetars_spatial_gui::end_3d_resize();
+        crate::game::chetars_spatial_gui::end_2d_resize();
     }
     if !game.native_playing() || !crate::game::chetars_spatial_gui::is_open() {
         crate::game::chetars_spatial_gui::set_2d_pointer_over(false);
+        crate::game::chetars_spatial_gui::end_2d_resize();
         return;
     }
 
@@ -19,14 +22,20 @@ fn render(
 
     if !crate::game::chetars_spatial_gui::is_2d_mode() {
         crate::game::chetars_spatial_gui::set_2d_pointer_over(false);
+        crate::game::chetars_spatial_gui::end_2d_resize();
         return;
     }
+
+    // The native pointer is released when 2D mode is enabled; keep the
+    // independent GUI pointer coordinates in sync with real CursorMoved events.
+    crate::game::chetars_spatial_gui::update_2d_resize(pointer);
 
     let atlas = &game.gui.atlas;
     let width = batch.width;
     let height = batch.height;
-    let panel_w = 620.0f32.min((width - 32.0).max(320.0));
-    let panel_h = 420.0f32.min((height - 32.0).max(260.0));
+    let size_factor = crate::game::chetars_spatial_gui::two_d_scale();
+    let panel_w = (620.0 * size_factor).clamp(320.0, (width - 32.0).max(320.0));
+    let panel_h = (420.0 * size_factor).clamp(260.0, (height - 32.0).max(260.0));
     let x = (width - panel_w) * 0.5;
     let y = (height - panel_h) * 0.5;
     crate::game::chetars_spatial_gui::set_2d_pointer_over(
@@ -59,6 +68,27 @@ fn render(
     fill(batch, x + 172.0, y + 76.0, panel_w - 192.0, panel_h - 96.0, 0xFFF8FAFC);
     fill(batch, x, y, 3.0, panel_h, 0xFF33AAFF);
     fill(batch, x, y, panel_w, 3.0, 0xFF33AAFF);
+
+    // Dotted triangular grip in the upper-left corner resizes the 2D window.
+    let resize_handle_over = pointer[0] >= x + 3.0 && pointer[0] <= x + 34.0
+        && pointer[1] >= y + 3.0 && pointer[1] <= y + 34.0;
+    let resize_color = if resize_handle_over || crate::game::chetars_spatial_gui::is_2d_resizing() {
+        0xFF33AAFF
+    } else {
+        0xFFB8C4D0
+    };
+    for row in 0..5 {
+        for col in 0..=row {
+            fill(
+                batch,
+                x + 9.0 + col as f32 * 4.2,
+                y + 9.0 + row as f32 * 4.2,
+                2.2,
+                2.2,
+                resize_color,
+            );
+        }
+    }
 
     text(batch, x + 26.0, y + 28.0, "CHETARS", 0xFFFFFFFF);
     text(
@@ -120,7 +150,9 @@ fn render(
         && pointer[0] >= add_x && pointer[0] <= add_x + 34.0
         && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
     crate::game::chetars_spatial_gui::set_hovered_add(over_add);
-    if over_close {
+    if resize_handle_over {
+        header_action = 11;
+    } else if over_close {
         header_action = 10;
     } else if over_add {
         header_action = 7;
@@ -245,4 +277,15 @@ fn render(
     }
 
     crate::game::chetars_spatial_gui::save_panel(selected);
+
+    // A drawn cursor remains visible even on platforms where the native
+    // pointer icon is suppressed by the compositor during a capture transition.
+    let cx = pointer[0].clamp(0.0, width - 2.0);
+    let cy = pointer[1].clamp(0.0, height - 2.0);
+    for step in 0..11 {
+        fill(batch, cx + step as f32, cy + step as f32, 2.0, 2.0, 0xFF101820);
+        if step < 8 {
+            fill(batch, cx + step as f32 + 1.0, cy + step as f32 + 1.0, 1.0, 1.0, 0xFFFFFFFF);
+        }
+    }
 }
