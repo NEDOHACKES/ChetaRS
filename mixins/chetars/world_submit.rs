@@ -35,9 +35,9 @@ fn draw_panel(
         let spread = if panel_index == 0 {
             0.0
         } else if panel_index % 2 == 1 {
-            ((panel_index + 1) / 2) as f32 * 0.72
+            ((panel_index + 1) / 2) as f32 * 1.10
         } else {
-            -((panel_index / 2) as f32) * 0.72
+            -((panel_index / 2) as f32) * 1.10
         };
         let spawn_yaw = base_yaw + spread;
         let spawn_pitch = forward.y.clamp(-1.0, 1.0).asin();
@@ -182,7 +182,9 @@ fn draw_panel(
         if let Some([screen_x, screen_y]) = hit {
             let plus_x = panel.header[1][0] - 48.0;
             let plus_y = panel.header[0][1] + 8.0;
-            let over_add = screen_x >= plus_x && screen_x <= plus_x + 34.0
+            let over_add = crate::game::chetars_spatial_gui::panel_count()
+                < crate::game::chetars_spatial_gui::max_panels()
+                && screen_x >= plus_x && screen_x <= plus_x + 34.0
                 && screen_y >= plus_y && screen_y <= plus_y + 30.0;
             crate::game::chetars_spatial_gui::set_hovered_add(over_add);
             let drag_hover = !over_add
@@ -295,12 +297,6 @@ fn draw_panel(
         draw.pop();
     };
 
-    let switch_progress = if crate::game::chetars_spatial_gui::selected_button() == 2 {
-        Some(crate::game::chetars_spatial_gui::advance_switch_animations())
-    } else {
-        None
-    };
-
     let draw_face = |game: &crate::game::Game<'_>, draw: &mut NativeWorldDraw| {
         paint(game, draw, panel.shadow, 0x99000000);
         let side_faces = [
@@ -318,11 +314,16 @@ fn draw_panel(
         paint(game, draw, panel.header, 0xFF101010);
         let plus_x = panel.header[1][0] - 48.0;
         let plus_y = panel.header[0][1] + 8.0;
+        let can_add = crate::game::chetars_spatial_gui::panel_count()
+            < crate::game::chetars_spatial_gui::max_panels();
         paint(
             game,
             draw,
             rect(plus_x, plus_y, 34.0, 30.0, 12.0),
-            if crate::game::chetars_spatial_gui::hovered_add() { 0xFF33AAFF } else { 0xFF303844 },
+            if !can_add { 0xFF272D34 }
+            else if crate::game::chetars_spatial_gui::hovered_panel() == Some(panel_index)
+                && crate::game::chetars_spatial_gui::hovered_add()
+            { 0xFF33AAFF } else { 0xFF303844 },
         );
         label(game, draw, plus_x + 12.0, plus_y + 21.0, "+", 0xFFFFFFFF);
         paint(game, draw, panel.sidebar, 0xFF1E1E1E);
@@ -346,7 +347,11 @@ fn draw_panel(
             draw,
             panel.body[0][0] + 110.0,
             panel.body[0][1] + 24.0,
-            "SPATIAL DISPLAY",
+            &format!(
+                "PANEL {} / {}",
+                panel_index + 1,
+                crate::game::chetars_spatial_gui::panel_count()
+            ),
             0xFFCCCCCC,
         );
 
