@@ -59,7 +59,15 @@ const NO_PANEL: u8 = MAX_PANELS as u8;
 // The arrays below keep each panel's placement and mode independent.
 static PANEL_ACTIVE: [AtomicBool; MAX_PANELS] = [
     AtomicBool::new(true),
-    const { AtomicBool::new(false) }; 9
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
+    AtomicBool::new(false),
 ];
 static PANEL_FOLLOW: [AtomicBool; MAX_PANELS] = [const { AtomicBool::new(false) }; MAX_PANELS];
 static PANEL_FOLLOW_CHANGED: [AtomicBool; MAX_PANELS] = [const { AtomicBool::new(false) }; MAX_PANELS];
