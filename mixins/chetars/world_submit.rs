@@ -61,8 +61,8 @@ fn world_submit(
                 crate::game::chetars_spatial_gui::set_panel_distance(radius as f32);
                 let direction = relative / radius;
                 crate::game::chetars_spatial_gui::set_orbit_angles(
-                    direction.x.atan2(-direction.z),
-                    direction.y.clamp(-1.0, 1.0).asin(),
+                    direction.x.atan2(-direction.z) as f32,
+                    direction.y.clamp(-1.0, 1.0).asin() as f32,
                 );
             }
         } else {
@@ -103,8 +103,8 @@ fn world_submit(
         let normal = relative.normalize_or_zero();
         if normal.length_squared() > 0.5 {
             crate::game::chetars_spatial_gui::set_orbit_angles(
-                normal.x.atan2(-normal.z),
-                normal.y.clamp(-1.0, 1.0).asin(),
+                normal.x.atan2(-normal.z) as f32,
+                normal.y.clamp(-1.0, 1.0).asin() as f32,
             );
         }
     }
