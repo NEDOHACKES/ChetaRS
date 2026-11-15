@@ -1,6 +1,6 @@
 # ChetaRS Spatial GUI
 
-A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.4.1.
+A client-side native Rust mod for the Horizon Nightly build shown in the user's launcher (2026-11-13), package version 0.5.0.
 
 ## Spatial display
 
@@ -11,29 +11,24 @@ A client-side native Rust mod for the Horizon Nightly build shown in the user's 
 
 ## Position and movement
 
-- **Keep at coordinates** is enabled by default. The panel is placed in the world when first shown and then stays at that world position and orientation while you turn your head or walk.
-- Aim at the panel's top title bar, then hold **Right Mouse Button** and turn the camera to orbit the panel around you horizontally and vertically. Release RMB to leave it at the new world position. The panel turns its front face toward the player while orbiting.
-- Scroll the mouse wheel while aiming at the top bar to move the panel closer or farther away. In Settings, the **- / +** controls and keyboard keys also change distance.
-- The panel is rendered on both sides with readable text from the front and back.
-- **Follow me** follows the player's position while preserving the panel's chosen offset/orbit from when the mode was enabled. The front face turns toward the player so the controls remain accessible. **Keep at coordinates** leaves the panel's position fixed in the world after dragging, while still turning its face toward the player.
-- The two position modes are mutually exclusive.
+- **Keep** preserves the panel's world position and the exact orientation it had when placed. It does not rotate to follow the player.
+- **Follow** tracks the player's position at the saved world-relative offset and turns the face toward the player.
+- Hold **Right Mouse Button** on a panel's top title bar and turn the camera to move that panel around the player. Each panel moves independently.
+- Scroll the wheel while aiming at a panel's title bar to change its distance. In Settings, the **− / +** controls and keyboard keys change the selected panel's distance.
 
-## Sections and controls
+## Multiple panels
 
-- Aim the crosshair at **HOME**, **PROFILE**, or **SETTINGS** in the left navigation and left-click to open that page.
-- **HOME** shows the function catalogue; **PROFILE** shows the active placement mode, distance and movement controls.
-- **SETTINGS** contains the mutually exclusive **Keep at coordinates** / **Follow me** switches and distance controls.
-- When following the camera, use **Left / Right Arrow** to switch sections and **Up / Down + Enter** to change placement mode; **- / +** changes distance.
+- Press the **+** button in a panel's upper-right corner to create another panel.
+- Up to **10 panels** can exist at once. Each panel has its own position, orientation, Follow/Keep choice and distance.
+- New panels are placed at separate angles around the player. Aim at a panel before using its controls to select and configure that one.
 
-## Settings
+## Sections and settings
 
-Select **SETTINGS** by pressing **Right Arrow** twice from HOME (Left / Right cycle through the three navigation tabs).
-- **Up / Down** selects one of the two setting rows.
-- **Enter** toggles the selected row.
-- You can also aim the crosshair at a setting row and left-click it.
-- Switch knobs animate smoothly between off and on.
-
-**F6** hides the panel; **Escape** also hides it (the vanilla pause menu may open as well).
+- Aim at **HOME**, **PROFILE**, or **SETTINGS** in the left navigation and left-click.
+- **SETTINGS → Follow / Keep** opens a small list with the two choices. They are mutually exclusive for the selected panel.
+- **2D Panel** is a separate setting. It hides all world-space 3D panels and shows a screen-space 2D window. The mouse cursor is released while 2D mode is active; switching back to 3D restores mouse-look.
+- **F7** also switches between 2D and 3D while the panel is open.
+- **F6** shows or hides the interface; **Escape** closes it.
 
 ## Visual reference
 
