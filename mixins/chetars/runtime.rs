@@ -25,6 +25,8 @@ static DRAG_HOVERED: AtomicBool = AtomicBool::new(false);
 static ANCHOR_READY: AtomicBool = AtomicBool::new(false);
 static LAST_VIEW_READY: AtomicBool = AtomicBool::new(false);
 static HOVERED_SETTING: AtomicU8 = AtomicU8::new(u8::MAX);
+static HOVERED_NAVIGATION: AtomicU8 = AtomicU8::new(u8::MAX);
+static HOVERED_DISTANCE: AtomicU8 = AtomicU8::new(u8::MAX);
 
 // World-space anchor position (f64 keeps precision at large coordinates).
 static ANCHOR_X: AtomicU64 = AtomicU64::new(0.0f64.to_bits());
@@ -36,9 +38,12 @@ static ANCHOR_QY: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ANCHOR_QZ: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static ANCHOR_QW: AtomicU32 = AtomicU32::new(1.0f32.to_bits());
 
-// Follow mode has a draggable offset in the camera's local right/up axes.
-static FOLLOW_OFFSET_X: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
-static FOLLOW_OFFSET_Y: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
+// Orbit is expressed in world space for pinned mode and camera-local space for follow mode.
+static ORBIT_YAW: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
+static ORBIT_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
+static PANEL_DISTANCE: AtomicU32 = AtomicU32::new(2.25f32.to_bits());
+static DISTANCE_DIRTY: AtomicBool = AtomicBool::new(false);
+static DRAG_ORBIT_READY: AtomicBool = AtomicBool::new(false);
 static LAST_YAW: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 static LAST_PITCH: AtomicU32 = AtomicU32::new(0.0f32.to_bits());
 
@@ -57,7 +62,10 @@ pub fn toggle_open() -> bool {
         DRAGGING.store(false, Ordering::Relaxed);
         DRAG_HOVERED.store(false, Ordering::Relaxed);
         HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
+        HOVERED_NAVIGATION.store(u8::MAX, Ordering::Relaxed);
+        HOVERED_DISTANCE.store(u8::MAX, Ordering::Relaxed);
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
+        DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
     }
     next
 }
@@ -67,7 +75,10 @@ pub fn close() {
     DRAGGING.store(false, Ordering::Relaxed);
     DRAG_HOVERED.store(false, Ordering::Relaxed);
     HOVERED_SETTING.store(u8::MAX, Ordering::Relaxed);
+    HOVERED_NAVIGATION.store(u8::MAX, Ordering::Relaxed);
+    HOVERED_DISTANCE.store(u8::MAX, Ordering::Relaxed);
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
+    DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
 }
 
 pub fn follow_mode() -> bool {
@@ -79,9 +90,10 @@ pub fn set_follow_mode(follow: bool) {
     if changed {
         // Switching modes creates a fresh anchor/offset at the current view.
         ANCHOR_READY.store(false, Ordering::Relaxed);
-        FOLLOW_OFFSET_X.store(0.0f32.to_bits(), Ordering::Relaxed);
-        FOLLOW_OFFSET_Y.store(0.0f32.to_bits(), Ordering::Relaxed);
+        ORBIT_YAW.store(0.0f32.to_bits(), Ordering::Relaxed);
+        ORBIT_PITCH.store(0.0f32.to_bits(), Ordering::Relaxed);
         LAST_VIEW_READY.store(false, Ordering::Relaxed);
+        DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
         DRAGGING.store(false, Ordering::Relaxed);
         DRAG_HOVERED.store(false, Ordering::Relaxed);
     }
@@ -123,6 +135,7 @@ pub fn advance_switch_animations() -> [f32; 2] {
 pub fn set_dragging(dragging: bool) {
     DRAGGING.store(dragging, Ordering::Relaxed);
     LAST_VIEW_READY.store(false, Ordering::Relaxed);
+    DRAG_ORBIT_READY.store(false, Ordering::Relaxed);
 }
 
 pub fn is_dragging() -> bool {
@@ -144,6 +157,24 @@ pub fn set_hovered_setting(index: Option<usize>) {
 
 pub fn hovered_setting() -> Option<usize> {
     let value = HOVERED_SETTING.load(Ordering::Relaxed);
+    (value < 2).then_some(value as usize)
+}
+
+pub fn set_hovered_navigation(index: Option<usize>) {
+    HOVERED_NAVIGATION.store(index.map_or(u8::MAX, |i| i.min(2) as u8), Ordering::Relaxed);
+}
+
+pub fn hovered_navigation() -> Option<usize> {
+    let value = HOVERED_NAVIGATION.load(Ordering::Relaxed);
+    (value < 3).then_some(value as usize)
+}
+
+pub fn set_hovered_distance_control(index: Option<usize>) {
+    HOVERED_DISTANCE.store(index.map_or(u8::MAX, |i| i.min(1) as u8), Ordering::Relaxed);
+}
+
+pub fn hovered_distance_control() -> Option<usize> {
+    let value = HOVERED_DISTANCE.load(Ordering::Relaxed);
     (value < 2).then_some(value as usize)
 }
 
@@ -228,25 +259,77 @@ pub fn move_anchor(offset: [f64; 3]) {
     ANCHOR_Z.store(z.to_bits(), Ordering::Relaxed);
 }
 
-pub fn follow_offset() -> [f32; 2] {
-    [
-        f32::from_bits(FOLLOW_OFFSET_X.load(Ordering::Relaxed)),
-        f32::from_bits(FOLLOW_OFFSET_Y.load(Ordering::Relaxed)),
-    ]
+pub fn panel_distance() -> f32 {
+    f32::from_bits(PANEL_DISTANCE.load(Ordering::Relaxed)).clamp(1.0, 8.0)
 }
 
-pub fn move_follow_offset(x: f32, y: f32) {
-    let next_x = f32::from_bits(FOLLOW_OFFSET_X.load(Ordering::Relaxed)) + x;
-    let next_y = f32::from_bits(FOLLOW_OFFSET_Y.load(Ordering::Relaxed)) + y;
-    FOLLOW_OFFSET_X.store(next_x.clamp(-3.0, 3.0).to_bits(), Ordering::Relaxed);
-    FOLLOW_OFFSET_Y.store(next_y.clamp(-2.0, 2.0).to_bits(), Ordering::Relaxed);
+pub fn set_panel_distance(distance: f32) {
+    if !distance.is_finite() {
+        return;
+    }
+    let next = distance.clamp(1.0, 8.0);
+    let previous = panel_distance();
+    if (next - previous).abs() > 0.0005 {
+        PANEL_DISTANCE.store(next.to_bits(), Ordering::Relaxed);
+        DISTANCE_DIRTY.store(true, Ordering::Relaxed);
+    }
 }
 
-pub fn update_drag_view(yaw: f32, pitch: f32, distance: f32) {
-    if LAST_VIEW_READY.load(Ordering::Relaxed) {
-        let last_yaw = f32::from_bits(LAST_YAW.load(Ordering::Relaxed));
-        let last_pitch = f32::from_bits(LAST_PITCH.load(Ordering::Relaxed));
-        if is_dragging() {
+pub fn adjust_panel_distance(delta: f32) {
+    if delta.is_finite() {
+        set_panel_distance(panel_distance() + delta);
+    }
+}
+
+pub fn take_distance_dirty() -> bool {
+    DISTANCE_DIRTY.swap(false, Ordering::Relaxed)
+}
+
+pub fn orbit_angles() -> (f32, f32) {
+    (
+        f32::from_bits(ORBIT_YAW.load(Ordering::Relaxed)),
+        f32::from_bits(ORBIT_PITCH.load(Ordering::Relaxed)),
+    )
+}
+
+pub fn orbit_offset(yaw: f32, pitch: f32, distance: f32) -> glam::Vec3 {
+    let horizontal = pitch.cos() * distance;
+    glam::Vec3::new(
+        yaw.sin() * horizontal,
+        pitch.sin() * distance,
+        -yaw.cos() * horizontal,
+    )
+}
+
+pub fn set_anchor_position(position: [f64; 3]) {
+    ANCHOR_X.store(position[0].to_bits(), Ordering::Relaxed);
+    ANCHOR_Y.store(position[1].to_bits(), Ordering::Relaxed);
+    ANCHOR_Z.store(position[2].to_bits(), Ordering::Relaxed);
+}
+
+/// While RMB is held on the title bar, camera yaw/pitch orbit the panel around
+/// the camera position. Releasing RMB leaves the pinned panel at that world point.
+pub fn update_drag_view(yaw: f32, pitch: f32, camera_position: [f64; 3]) {
+    let camera = glam::DVec3::from_array(camera_position);
+
+    if is_dragging() {
+        if !DRAG_ORBIT_READY.load(Ordering::Relaxed) {
+            if !follow_mode() && anchor_ready() {
+                let (position, _) = anchor();
+                let relative = glam::DVec3::from_array(position) - camera;
+                let radius = relative.length();
+                if radius.is_finite() && radius > 0.05 {
+                    PANEL_DISTANCE.store(radius as f32 .clamp(1.0, 8.0).to_bits(), Ordering::Relaxed);
+                    ORBIT_YAW.store(relative.x.atan2(-relative.z).to_bits(), Ordering::Relaxed);
+                    ORBIT_PITCH.store((relative.y / radius).clamp(-1.0, 1.0).asin().to_bits(), Ordering::Relaxed);
+                }
+            }
+            DRAG_ORBIT_READY.store(true, Ordering::Relaxed);
+        }
+
+        if LAST_VIEW_READY.load(Ordering::Relaxed) {
+            let last_yaw = f32::from_bits(LAST_YAW.load(Ordering::Relaxed));
+            let last_pitch = f32::from_bits(LAST_PITCH.load(Ordering::Relaxed));
             let mut yaw_delta = yaw - last_yaw;
             if yaw_delta > std::f32::consts::PI {
                 yaw_delta -= std::f32::consts::TAU;
@@ -254,22 +337,19 @@ pub fn update_drag_view(yaw: f32, pitch: f32, distance: f32) {
                 yaw_delta += std::f32::consts::TAU;
             }
             let pitch_delta = pitch - last_pitch;
-            let speed = distance * 1.35;
-            if follow_mode() {
-                move_follow_offset(-yaw_delta * speed, pitch_delta * speed);
-            } else {
-                let (_, rotation) = anchor();
-                let right = rotation * glam::Vec3::X;
-                let up = rotation * glam::Vec3::Y;
-                let shift = right * (-yaw_delta * speed) + up * (pitch_delta * speed);
-                move_anchor([
-                    shift.x as f64,
-                    shift.y as f64,
-                    shift.z as f64,
-                ]);
+            let (old_yaw, old_pitch) = orbit_angles();
+            let next_yaw = (old_yaw - yaw_delta).rem_euclid(std::f32::consts::TAU);
+            let next_pitch = (old_pitch + pitch_delta).clamp(-1.35, 1.35);
+            ORBIT_YAW.store(next_yaw.to_bits(), Ordering::Relaxed);
+            ORBIT_PITCH.store(next_pitch.to_bits(), Ordering::Relaxed);
+
+            if !follow_mode() {
+                let offset = orbit_offset(next_yaw, next_pitch, panel_distance()).as_dvec3();
+                set_anchor_position((camera + offset).to_array());
             }
         }
     }
+
     LAST_YAW.store(yaw.to_bits(), Ordering::Relaxed);
     LAST_PITCH.store(pitch.to_bits(), Ordering::Relaxed);
     LAST_VIEW_READY.store(true, Ordering::Relaxed);
