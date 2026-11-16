@@ -7,6 +7,7 @@ pub struct Panel {
     pub sidebar: [[f32; 3]; 4],
     pub content_frame: [[f32; 3]; 4],
     pub white_area: [[f32; 3]; 4],
+    pub info_frame: [[f32; 3]; 4],
     pub buttons: [[[f32; 3]; 4]; 3],
     pub accent_left: [[f32; 3]; 4],
     pub accent_top: [[f32; 3]; 4],
@@ -560,8 +561,10 @@ pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
     let cx = width * 0.5;
     let cy = height * 0.5;
 
-    let w = (width * 0.76).clamp(500.0, 980.0);
-    let h = (height * 0.72).clamp(290.0, 580.0);
+    // Four-column ClickGUI layout: navigation, panel list, selected-panel
+    // settings, and a compact status/controls column.
+    let w = (width * 0.80).clamp(840.0, 1180.0);
+    let h = (height * 0.78).clamp(500.0, 700.0);
     let x = cx - w * 0.5;
     let y = cy - h * 0.5;
 
@@ -570,26 +573,29 @@ pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
     let inner = quad(x + 6.0, y + 6.0, w - 12.0, h - 12.0, 2.0);
     let header = quad(x + 12.0, y + 12.0, w - 24.0, 48.0, 4.0);
 
-    let sidebar_x = x + 14.0;
-    let content_x = x + 170.0;
+    let section_x = x + 14.0;
     let section_y = y + 72.0;
     let section_h = h - 86.0;
+    let gap = 10.0;
+    let usable_w = w - 28.0 - gap * 3.0;
+    let sidebar_w = usable_w * 0.16;
+    let list_w = usable_w * 0.25;
+    let settings_w = usable_w * 0.39;
+    let info_w = usable_w - sidebar_w - list_w - settings_w;
 
-    let sidebar = quad(sidebar_x, section_y, 144.0, section_h, 5.0);
-    let content_frame = quad(content_x, section_y, w - 184.0, section_h, 6.0);
-    let white_area = quad(
-        content_x + 6.0,
-        section_y + 6.0,
-        w - 196.0,
-        section_h - 12.0,
-        8.0,
-    );
+    let sidebar = quad(section_x, section_y, sidebar_w, section_h, 5.0);
+    let content_x = section_x + sidebar_w + gap;
+    let content_frame = quad(content_x, section_y, list_w, section_h, 6.0);
+    let settings_x = content_x + list_w + gap;
+    let white_area = quad(settings_x, section_y, settings_w, section_h, 7.0);
+    let info_x = settings_x + settings_w + gap;
+    let info_frame = quad(info_x, section_y, info_w, section_h, 7.0);
 
-    let button_x = sidebar_x + 10.0;
-    let button_w = 124.0;
+    let button_x = section_x + 8.0;
+    let button_w = (sidebar_w - 16.0).max(72.0);
     let button_h = 38.0;
     let button_gap = 10.0;
-    let button_y = section_y + 16.0;
+    let button_y = section_y + 18.0;
     let buttons = [
         quad(button_x, button_y, button_w, button_h, 9.0),
         quad(button_x, button_y + button_h + button_gap, button_w, button_h, 9.0),
@@ -607,12 +613,12 @@ pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
         sidebar,
         content_frame,
         white_area,
+        info_frame,
         buttons,
         accent_left,
         accent_top,
     }
 }
-
 
 pub fn max_panels() -> usize { MAX_PANELS }
 
@@ -711,7 +717,8 @@ pub fn hovered_add() -> bool {
 }
 
 pub fn set_hovered_mode_action(action: u8) {
-    HOVERED_MODE_ACTION.store(action.min(11), Ordering::Relaxed);
+    // 0-11 are the existing controls; 12-21 select panel slots 0-9.
+    HOVERED_MODE_ACTION.store(action.min(21), Ordering::Relaxed);
 }
 
 pub fn hovered_mode_action() -> u8 {
