@@ -184,6 +184,19 @@ fn mouse_button(
             let _ = crate::game::chetars_spatial_gui::step_selected_panel(true);
             *canceled = true;
         }
+        13 => {
+            crate::game::chetars_spatial_gui::close();
+            game.capture(true);
+            *canceled = true;
+            return;
+        }
+        14 => {
+            crate::game::chetars_spatial_gui::end_2d_resize();
+            crate::game::chetars_spatial_gui::end_3d_resize();
+            let now_2d = crate::game::chetars_spatial_gui::toggle_2d_mode();
+            game.capture(!now_2d);
+            *canceled = true;
+        }
         _ => {}
     }
     crate::game::chetars_spatial_gui::save_panel(index);
