@@ -518,9 +518,11 @@ fn world_submit(
             label(game, draw, list_x + 18.0, ry + row_h * 0.62,
                 &format!("PANEL {:02}", target + 1),
                 if selected { white } else { bright });
-            let mode = if crate::game::chetars_spatial_gui::selected_panel() as usize == target {
-                if crate::game::chetars_spatial_gui::follow_mode() { "FOLLOW" } else { "KEEP" }
-            } else { "READY" };
+            let mode = if crate::game::chetars_spatial_gui::panel_follow_mode(target) {
+                "FOLLOW"
+            } else {
+                "KEEP"
+            };
             label(game, draw, list_x + list_w - 58.0, ry + row_h * 0.62, mode, muted);
         }
 
@@ -625,7 +627,7 @@ fn world_submit(
         paint(game, draw, rect(info_x + 8.0, info_y + 10.0, info_w - 16.0, 150.0, 9.0), card);
         label(game, draw, info_x + 18.0, info_y + 32.0, "PANEL STATUS", white);
         label(game, draw, info_x + 18.0, info_y + 60.0,
-            &format!("{:02} / 10 ACTIVE", panel_index + 1), blue);
+            &format!("PANEL {:02} SELECTED", crate::game::chetars_spatial_gui::selected_panel() as usize + 1), blue);
         label(game, draw, info_x + 18.0, info_y + 86.0,
             if follow { "FOLLOW MODE" } else { "KEEP MODE" }, bright);
         label(game, draw, info_x + 18.0, info_y + 112.0, distance_label.as_str(), muted);
@@ -643,8 +645,8 @@ fn world_submit(
             ("WHEEL", "DISTANCE"),
         ].iter().enumerate() {
             let ky = quick_y + 48.0 + i as f32 * 32.0;
-            label(game, draw, info_x + 18.0, ky, key, blue);
-            label(game, draw, info_x + 66.0, ky, name, bright);
+            label(game, draw, info_x + 12.0, ky, key, blue);
+            label(game, draw, info_x + 52.0, ky, name, bright);
         }
     };
 
