@@ -832,6 +832,20 @@ pub fn add_panel() -> Option<usize> {
     Some(index)
 }
 
+pub fn panel_follow_mode(index: usize) -> bool {
+    index < MAX_PANELS && PANEL_FOLLOW[index].load(Ordering::Relaxed)
+}
+
+pub fn panel_distance_for(index: usize) -> f32 {
+    if index >= MAX_PANELS { return 2.25; }
+    f32::from_bits(PANEL_DISTANCES[index].load(Ordering::Relaxed)).clamp(1.0, 8.0)
+}
+
+pub fn panel_scale_for(index: usize) -> f32 {
+    if index >= MAX_PANELS { return 1.0; }
+    f32::from_bits(PANEL_SCALES[index].load(Ordering::Relaxed)).clamp(0.45, 2.4)
+}
+
 pub fn load_panel(index: usize) {
     if index >= MAX_PANELS { return; }
     FOLLOW_MODE.store(PANEL_FOLLOW[index].load(Ordering::Relaxed), Ordering::Relaxed);
