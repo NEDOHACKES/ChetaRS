@@ -563,8 +563,8 @@ pub fn panel(_mouse: [f32; 2], width: f32, height: f32) -> Panel {
 
     // Four-column ClickGUI layout: navigation, panel list, selected-panel
     // settings, and a compact status/controls column.
-    let w = (width * 0.80).clamp(840.0, 1180.0);
-    let h = (height * 0.78).clamp(500.0, 700.0);
+    let w = (width * 0.86).clamp(640.0, 1180.0).min((width - 24.0).max(320.0));
+    let h = (height * 0.82).clamp(400.0, 700.0).min((height - 24.0).max(260.0));
     let x = cx - w * 0.5;
     let y = cy - h * 0.5;
 
@@ -717,7 +717,7 @@ pub fn hovered_add() -> bool {
 }
 
 pub fn set_hovered_mode_action(action: u8) {
-    // 0-11 are the existing controls; 12-21 select panel slots 0-9.
+    // 0-11 are the header/settings controls; 12-21 select panel slots 0-9.
     HOVERED_MODE_ACTION.store(action.min(21), Ordering::Relaxed);
 }
 
