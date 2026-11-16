@@ -31,41 +31,16 @@ fn render(
     let atlas = &game.gui.atlas;
     let width = batch.width;
     let height = batch.height;
-    let size_factor = crate::game::chetars_spatial_gui::two_d_scale();
+    let scale = crate::game::chetars_spatial_gui::two_d_scale();
 
-    // Responsive 2D counterpart of the world-space four-column ClickGUI.
-    let panel_w = ((width * 0.88).min(1080.0) * size_factor)
-        .min((width - 32.0).max(320.0))
-        .max(320.0);
-    let panel_h = ((height * 0.84).min(700.0) * size_factor)
-        .min((height - 32.0).max(260.0))
-        .max(260.0);
+    let panel_w = ((width * 0.88).min(1160.0) * scale)
+        .min((width - 28.0).max(420.0))
+        .max(420.0);
+    let panel_h = ((height * 0.84).min(720.0) * scale)
+        .min((height - 28.0).max(300.0))
+        .max(300.0);
     let x = (width - panel_w) * 0.5;
     let y = (height - panel_h) * 0.5;
-
-    let section_x = x + 14.0;
-    let section_y = y + 72.0;
-    let section_h = panel_h - 86.0;
-    let gap = 10.0;
-    let usable_w = panel_w - 28.0 - gap * 3.0;
-    let sidebar_w = usable_w * 0.16;
-    let list_w = usable_w * 0.25;
-    let settings_w = usable_w * 0.39;
-    let info_w = usable_w - sidebar_w - list_w - settings_w;
-
-    let sidebar_x = section_x;
-    let list_x = sidebar_x + sidebar_w + gap;
-    let settings_x = list_x + list_w + gap;
-    let info_x = settings_x + settings_w + gap;
-    let selected = crate::game::chetars_spatial_gui::selected_panel() as usize;
-
-    let inside = pointer[0] >= x && pointer[0] <= x + panel_w
-        && pointer[1] >= y && pointer[1] <= y + panel_h;
-    crate::game::chetars_spatial_gui::set_2d_pointer_over(inside);
-    crate::game::chetars_spatial_gui::set_hovered_panel(selected);
-    crate::game::chetars_spatial_gui::set_hovered_add(false);
-    crate::game::chetars_spatial_gui::set_hovered_navigation(None);
-    crate::game::chetars_spatial_gui::set_hovered_mode_action(0);
 
     let fill = |batch: &mut HudBatch, x: f32, y: f32, w: f32, h: f32, color: u32| {
         batch.fill(atlas, x, y, w.max(0.0), h.max(0.0), color);
@@ -73,284 +48,378 @@ fn render(
     let text = |batch: &mut HudBatch, x: f32, y: f32, value: &str, color: u32| {
         batch.text(atlas, value, x, y, color, true);
     };
-    let rect = |batch: &mut HudBatch, x: f32, y: f32, w: f32, h: f32, color: u32| {
-        fill(batch, x, y, w, h, color);
-    };
 
-    let bg = 0xFF141A2A;
-    let card = 0xFF242D43;
-    let card_alt = 0xFF2C3650;
-    let card_hover = 0xFF3C4567;
-    let purple = 0xFF7C5CFF;
-    let blue = 0xFF6EA8FF;
-    let bright = 0xFFB8C2FF;
-    let muted = 0xFF8794BA;
-    let white = 0xFFF2F4FF;
+    // Glazed-inspired palette: deep navy glass, indigo surfaces and violet/blue accents.
+    let bg = 0xFF121827;
+    let frame = 0xFF1B243B;
+    let card = 0xFF252F4A;
+    let card2 = 0xFF2D3855;
+    let hover = 0xFF3E4A70;
+    let active = 0xFF4B4E8D;
+    let purple = 0xFF805DFF;
+    let blue = 0xFF6E9EFF;
+    let white = 0xFFF3F5FF;
+    let bright = 0xFFB8C2EA;
+    let muted = 0xFF7F8BAF;
+    let line = 0xFF39445F;
+    let off = 0xFF4A536D;
 
-    // Dim the Minecraft world without hiding the independent 3D panels behind this overlay.
-    fill(batch, 0.0, 0.0, width, height, 0xA60A0F1F);
+    // Keep the Minecraft world visible and keep all independent 3D panels rendered behind this UI.
+    fill(batch, 0.0, 0.0, width, height, 0xA90A0E18);
 
-    // Window frame, top bar and four distinct work areas.
-    fill(batch, x + 8.0, y + 10.0, panel_w, panel_h, 0x99000000);
+    // Outer glass frame and subtle edge highlights.
+    fill(batch, x + 7.0, y + 9.0, panel_w, panel_h, 0x99000000);
     fill(batch, x, y, panel_w, panel_h, bg);
-    fill(batch, x + 5.0, y + 5.0, panel_w - 10.0, panel_h - 10.0, 0xFF1B2336);
-    fill(batch, x + 12.0, y + 12.0, panel_w - 24.0, 48.0, 0xFF202940);
-    fill(batch, sidebar_x, section_y, sidebar_w, section_h, 0xFF202A40);
-    fill(batch, list_x, section_y, list_w, section_h, 0xFF202A40);
-    fill(batch, settings_x, section_y, settings_w, section_h, 0xFF242D43);
-    fill(batch, info_x, section_y, info_w, section_h, 0xFF202A40);
-    fill(batch, x, y, 3.0, panel_h, purple);
-    fill(batch, x, y, panel_w, 3.0, blue);
-    fill(batch, x + 5.0, y + panel_h - 5.0, panel_w - 10.0, 1.0, 0xFF46516C);
+    fill(batch, x + 2.0, y + 2.0, panel_w - 4.0, 2.0, 0xFF303B62);
+    fill(batch, x + 2.0, y + panel_h - 4.0, panel_w - 4.0, 2.0, 0xFF27314B);
+    fill(batch, x + 2.0, y + 2.0, 2.0, panel_h - 4.0, purple);
+    fill(batch, x + panel_w - 4.0, y + 2.0, 2.0, panel_h - 4.0, blue);
 
-    // Dotted triangular grip stays in the top-left corner and controls window scale.
-    let resize_handle_over = pointer[0] >= x + 3.0 && pointer[0] <= x + 34.0
-        && pointer[1] >= y + 3.0 && pointer[1] <= y + 34.0;
-    let resize_color = if resize_handle_over || crate::game::chetars_spatial_gui::is_2d_resizing() {
+    // Header.
+    let header_x = x + 16.0;
+    let header_y = y + 16.0;
+    let header_w = panel_w - 32.0;
+    fill(batch, header_x, header_y, header_w, 56.0, frame);
+    fill(batch, header_x, header_y, 2.0, 56.0, purple);
+    fill(batch, header_x + 2.0, header_y, header_w - 4.0, 2.0, 0xFF344064);
+
+    // Dotted top-left resize grip.
+    let grip_over = pointer[0] >= x + 2.0 && pointer[0] <= x + 36.0
+        && pointer[1] >= y + 2.0 && pointer[1] <= y + 36.0;
+    let grip_color = if grip_over || crate::game::chetars_spatial_gui::is_2d_resizing() {
         blue
     } else {
         bright
     };
     for row in 0..5 {
         for col in 0..=row {
-            fill(batch, x + 9.0 + col as f32 * 4.2, y + 9.0 + row as f32 * 4.2,
-                2.2, 2.2, resize_color);
+            fill(
+                batch,
+                x + 10.0 + col as f32 * 4.0,
+                y + 10.0 + row as f32 * 4.0,
+                2.2,
+                2.2,
+                grip_color,
+            );
         }
     }
 
-    // Header brand and panel navigation.
-    fill(batch, x + 18.0, y + 15.0, 28.0, 28.0, purple);
-    fill(batch, x + 33.0, y + 15.0, 13.0, 28.0, blue);
-    text(batch, x + 54.0, y + 29.0, "CHETARS", white);
-    text(batch, x + 116.0, y + 29.0, "SPATIAL CONTROL CENTER", muted);
-    text(batch, x + 218.0, y + 29.0,
-        &format!("PANEL {} / {}", selected + 1, crate::game::chetars_spatial_gui::panel_count()), bright);
+    // Brand.
+    fill(batch, header_x + 18.0, header_y + 12.0, 32.0, 32.0, purple);
+    fill(batch, header_x + 34.0, header_y + 12.0, 16.0, 32.0, blue);
+    text(batch, header_x + 60.0, header_y + 23.0, "CHETARS", white);
+    text(batch, header_x + 60.0, header_y + 40.0, "v0.5.5", muted);
 
-    let arrow_y = y + 21.0;
-    let prev_x = x + 12.0 + 244.0;
-    let next_x = x + 12.0 + 280.0;
-    let over_prev = pointer[0] >= prev_x && pointer[0] <= prev_x + 28.0
-        && pointer[1] >= arrow_y && pointer[1] <= arrow_y + 30.0;
-    let over_next = pointer[0] >= next_x && pointer[0] <= next_x + 28.0
-        && pointer[1] >= arrow_y && pointer[1] <= arrow_y + 30.0;
-    for (bx, glyph, over) in [(prev_x, "<", over_prev), (next_x, ">", over_next)] {
-        fill(batch, bx, arrow_y, 28.0, 30.0, if over { card_hover } else { card_alt });
-        text(batch, bx + 9.0, arrow_y + 21.0, glyph, white);
+    // Search field is visual; no new backend/search behavior is introduced.
+    let search_x = header_x + header_w * 0.37;
+    let search_w = header_w * 0.36;
+    fill(batch, search_x, header_y + 10.0, search_w, 36.0, card);
+    fill(batch, search_x, header_y + 10.0, 2.0, 36.0, 0xFF39456B);
+    text(batch, search_x + 16.0, header_y + 33.0, "⌕", bright);
+    text(batch, search_x + 42.0, header_y + 33.0, "Search modules...", muted);
+
+    // Header controls.
+    let pin_x = header_x + header_w - 92.0;
+    let expand_x = pin_x + 34.0;
+    let close_x = pin_x + 68.0;
+    for (bx, glyph) in [(pin_x, "P"), (expand_x, "↗"), (close_x, "×")] {
+        fill(batch, bx, header_y + 12.0, 28.0, 32.0, card2);
+        text(batch, bx + 9.0, header_y + 33.0, glyph, bright);
     }
 
-    let add_x = x + panel_w - 124.0;
-    let add_y = arrow_y;
-    let can_add = crate::game::chetars_spatial_gui::panel_count()
-        < crate::game::chetars_spatial_gui::max_panels();
-    let over_add = can_add && pointer[0] >= add_x && pointer[0] <= add_x + 34.0
-        && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
-    let over_close = crate::game::chetars_spatial_gui::panel_count() > 1
-        && pointer[0] >= add_x + 40.0 && pointer[0] <= add_x + 74.0
-        && pointer[1] >= add_y && pointer[1] <= add_y + 30.0;
-    fill(batch, add_x, add_y, 34.0, 30.0,
-        if !can_add { 0xFF30394D } else if over_add { purple } else { card_alt });
-    text(batch, add_x + 12.0, add_y + 21.0, "+", white);
-    fill(batch, add_x + 40.0, add_y, 34.0, 30.0,
-        if over_close { 0xFFB84B66 } else { card_alt });
-    text(batch, add_x + 52.0, add_y + 21.0, "x", white);
-    crate::game::chetars_spatial_gui::set_hovered_add(over_add);
+    let content_y = header_y + 68.0;
+    let content_h = panel_h - 84.0;
+    let gap = 12.0;
+    let sidebar_w = (panel_w * 0.18).clamp(132.0, 210.0);
+    let list_w = (panel_w * 0.27).clamp(205.0, 315.0);
+    let settings_w = (panel_w * 0.34).clamp(255.0, 390.0);
+    let info_w = panel_w - 32.0 - sidebar_w - list_w - settings_w - gap * 3.0;
 
-    let mut header_action = if resize_handle_over { 11 }
-        else if over_close { 10 }
-        else if over_add { 7 }
-        else if over_prev { 8 }
-        else if over_next { 9 }
-        else { 0 };
+    let sidebar_x = x + 16.0;
+    let list_x = sidebar_x + sidebar_w + gap;
+    let settings_x = list_x + list_w + gap;
+    let info_x = settings_x + settings_w + gap;
 
-    // Left navigation rail.
-    let tabs = ["OVERVIEW", "PROFILE", "SETTINGS"];
-    let mut hovered_tab = None;
+    // Four-column glass layout matching the supplied reference.
+    fill(batch, sidebar_x, content_y, sidebar_w, content_h, frame);
+    fill(batch, list_x, content_y, list_w, content_h, frame);
+    fill(batch, settings_x, content_y, settings_w, content_h, frame);
+    fill(batch, info_x, content_y, info_w, content_h, frame);
+
+    // Left navigation.
+    let nav_items = [
+        ("01", "Overview"),
+        ("02", "Profile"),
+        ("03", "Settings"),
+    ];
+    let selected_nav = crate::game::chetars_spatial_gui::selected_button().min(2);
+    let mut hovered_nav = None;
+
+    text(batch, sidebar_x + 18.0, content_y + 26.0, "MODULES", white);
+    text(batch, sidebar_x + 18.0, content_y + 46.0, "Spatial control", muted);
+
     for i in 0..3 {
-        let bx = sidebar_x + 8.0;
-        let by = section_y + 18.0 + i as f32 * 48.0;
-        let bw = sidebar_w - 16.0;
+        let bx = sidebar_x + 12.0;
+        let by = content_y + 64.0 + i as f32 * 50.0;
+        let bw = sidebar_w - 24.0;
         let bh = 38.0;
         let over = pointer[0] >= bx && pointer[0] <= bx + bw
             && pointer[1] >= by && pointer[1] <= by + bh;
-        if over { hovered_tab = Some(i); }
-        let active = crate::game::chetars_spatial_gui::selected_button() == i;
-        fill(batch, bx, by, bw, bh,
-            if active { 0xFF514C86 } else if over { card_hover } else { card });
-        if active { fill(batch, bx, by, 3.0, bh, blue); }
-        text(batch, bx + 12.0, by + 24.0, ["01", "02", "03"][i],
-            if active { blue } else { muted });
-        text(batch, bx + 40.0, by + 24.0, tabs[i],
-            if active || over { white } else { bright });
+        if over {
+            hovered_nav = Some(i);
+        }
+        let is_active = selected_nav == i;
+        fill(
+            batch,
+            bx,
+            by,
+            bw,
+            bh,
+            if is_active { active } else if over { hover } else { card },
+        );
+        if is_active {
+            fill(batch, bx, by, 3.0, bh, blue);
+        }
+        text(batch, bx + 12.0, by + 24.0, nav_items[i].0, if is_active { blue } else { muted });
+        text(batch, bx + 43.0, by + 24.0, nav_items[i].1, if is_active || over { white } else { bright });
     }
-    crate::game::chetars_spatial_gui::set_hovered_navigation(hovered_tab);
-    text(batch, sidebar_x + 12.0, section_y + section_h - 18.0, "WORLD UI", muted);
+    crate::game::chetars_spatial_gui::set_hovered_navigation(hovered_nav);
 
-    // Center-left list of all active world panels.
-    text(batch, list_x + 12.0, section_y + 23.0, "SPATIAL PANELS", white);
-    text(batch, list_x + 12.0, section_y + 40.0, "Select one to edit", muted);
-    let rows_top = section_y + 58.0;
-    let rows_bottom = section_y + section_h - 10.0;
-    let row_gap = 4.0;
-    let row_h = ((rows_bottom - rows_top - row_gap * 9.0) / 10.0).clamp(22.0, 34.0);
+    let footer_y = content_y + content_h - 122.0;
+    fill(batch, sidebar_x + 12.0, footer_y, sidebar_w - 24.0, 1.0, line);
+    fill(batch, sidebar_x + 18.0, footer_y + 18.0, 36.0, 36.0, purple);
+    text(batch, sidebar_x + 64.0, footer_y + 34.0, "ChetaRS", white);
+    text(batch, sidebar_x + 64.0, footer_y + 50.0, "Spatial UI", muted);
+
+    // Four small utility buttons are visual affordances; only existing menu functions are wired.
+    let utility_y = footer_y + 70.0;
+    for i in 0..4 {
+        let bx = sidebar_x + 12.0 + i as f32 * ((sidebar_w - 24.0) / 4.0);
+        let bw = (sidebar_w - 30.0) / 4.0;
+        fill(batch, bx, utility_y, bw, 30.0, card2);
+        text(batch, bx + bw * 0.5 - 4.0, utility_y + 20.0, ["⌕", "⚙", "◎", "→"][i], bright);
+    }
+
+    // Center-left: independent world panels, styled like the reference module list.
+    let selected = crate::game::chetars_spatial_gui::selected_panel() as usize;
+    text(batch, list_x + 20.0, content_y + 28.0, "SPATIAL PANELS", white);
+    text(
+        batch,
+        list_x + 20.0,
+        content_y + 48.0,
+        &format!("{} active modules", crate::game::chetars_spatial_gui::panel_count()),
+        muted,
+    );
+
+    let rows_top = content_y + 62.0;
+    let rows_bottom = content_y + content_h - 18.0;
+    let row_gap = 7.0;
+    let max_rows = 7usize;
+    let row_h = ((rows_bottom - rows_top - row_gap * (max_rows as f32 - 1.0)) / max_rows as f32)
+        .clamp(42.0, 66.0);
+
     let mut visible_row = 0usize;
     let mut hovered_panel_action = 0u8;
+
     for target in 0..crate::game::chetars_spatial_gui::max_panels() {
-        if !crate::game::chetars_spatial_gui::panel_exists(target) { continue; }
+        if !crate::game::chetars_spatial_gui::panel_exists(target) {
+            continue;
+        }
+        if visible_row >= max_rows {
+            break;
+        }
+
         let ry = rows_top + visible_row as f32 * (row_h + row_gap);
         visible_row += 1;
-        let rx = list_x + 8.0;
-        let rw = list_w - 16.0;
+        let rx = list_x + 12.0;
+        let rw = list_w - 24.0;
         let over = pointer[0] >= rx && pointer[0] <= rx + rw
             && pointer[1] >= ry && pointer[1] <= ry + row_h;
-        let active = selected == target;
-        if over { hovered_panel_action = 12 + target as u8; }
-        fill(batch, rx, ry, rw, row_h,
-            if active { 0xFF454A78 } else if over { card_hover } else { card_alt });
-        fill(batch, rx, ry, 3.0, row_h, if active { blue } else { purple });
-        text(batch, rx + 10.0, ry + row_h * 0.62, &format!("PANEL {:02}", target + 1),
-            if active { white } else { bright });
-        text(batch, rx + rw - 58.0, ry + row_h * 0.62,
-            if crate::game::chetars_spatial_gui::panel_follow_mode(target) { "FOLLOW" } else { "KEEP" }, muted);
+        let is_active = selected == target;
+
+        if over {
+            hovered_panel_action = 12 + target as u8;
+        }
+
+        fill(
+            batch,
+            rx,
+            ry,
+            rw,
+            row_h,
+            if is_active { active } else if over { hover } else { card },
+        );
+        fill(batch, rx, ry, 3.0, row_h, if is_active { blue } else { purple });
+
+        fill(batch, rx + 14.0, ry + 10.0, 34.0, 34.0, if is_active { purple } else { card2 });
+        text(
+            batch,
+            rx + 25.0,
+            ry + 32.0,
+            if is_active { "◎" } else { "◌" },
+            blue,
+        );
+
+        text(
+            batch,
+            rx + 60.0,
+            ry + 25.0,
+            &format!("Panel {:02}", target + 1),
+            if is_active { white } else { bright },
+        );
+        text(
+            batch,
+            rx + 60.0,
+            ry + 44.0,
+            if crate::game::chetars_spatial_gui::panel_follow_mode(target) {
+                "Follow"
+            } else {
+                "Keep at coordinates"
+            },
+            muted,
+        );
+
+        let mode_x = rx + rw - 78.0;
+        fill(batch, mode_x, ry + 16.0, 58.0, 24.0, if crate::game::chetars_spatial_gui::panel_follow_mode(target) { blue } else { off });
+        fill(
+            batch,
+            mode_x + if crate::game::chetars_spatial_gui::panel_follow_mode(target) { 31.0 } else { 3.0 },
+            ry + 19.0,
+            18.0,
+            18.0,
+            white,
+        );
     }
 
-    // Main settings/profile area.
-    let row_left = settings_x + 12.0;
-    let row_w = settings_w - 24.0;
+    // Main settings column.
+    let row_left = settings_x + 18.0;
+    let row_w = settings_w - 36.0;
     let follow = crate::game::chetars_spatial_gui::follow_mode();
-    let mode_label = if follow { "FOLLOW" } else { "KEEP" };
     let distance = crate::game::chetars_spatial_gui::panel_distance();
     let scale_label = format!("{:.0}%", crate::game::chetars_spatial_gui::panel_scale() * 100.0);
-    let mut settings_action = 0u8;
 
-    match crate::game::chetars_spatial_gui::selected_button() {
-        0 => {
-            text(batch, settings_x + 14.0, section_y + 24.0, "OVERVIEW", white);
-            text(batch, settings_x + 14.0, section_y + 42.0, "Your spatial workspace", muted);
-            let cards = [
-                (section_y + 64.0, "3D WORLD PANELS", "Floating displays in your world"),
-                (section_y + 124.0, "360 ORBIT CONTROL", "Hold RMB on a panel header"),
-                (section_y + 184.0, "INDEPENDENT PANELS", "Each panel keeps its own position"),
-            ];
-            for (cy, title, detail) in cards {
-                fill(batch, row_left, cy, row_w, 48.0, card_alt);
-                fill(batch, row_left, cy, 3.0, 48.0, purple);
-                text(batch, row_left + 12.0, cy + 18.0, title, white);
-                text(batch, row_left + 12.0, cy + 36.0, detail, muted);
-            }
-            text(batch, row_left, section_y + 270.0,
-                &format!("ACTIVE PANELS: {} / {}", crate::game::chetars_spatial_gui::panel_count(), crate::game::chetars_spatial_gui::max_panels()), bright);
-        }
-        1 => {
-            text(batch, settings_x + 14.0, section_y + 24.0, "PANEL PROFILE", white);
-            text(batch, settings_x + 14.0, section_y + 42.0, "Selected display details", muted);
-            let distance_profile = format!("{:.1} BLOCKS", distance);
-            let cards = [
-                (section_y + 68.0, "PLACEMENT MODE", mode_label),
-                (section_y + 132.0, "PANEL DISTANCE", distance_profile.as_str()),
-                (section_y + 196.0, "PANEL SCALE", scale_label.as_str()),
-            ];
-            for (cy, title, value) in cards {
-                fill(batch, row_left, cy, row_w, 48.0, card_alt);
-                text(batch, row_left + 12.0, cy + 18.0, title, muted);
-                text(batch, row_left + 12.0, cy + 37.0, value, white);
-            }
-            text(batch, row_left, section_y + 280.0, "RMB ORBIT KEEPS THE PANEL UPRIGHT", bright);
-        }
-        _ => {
-            text(batch, settings_x + 14.0, section_y + 24.0, "DISPLAY SETTINGS", white);
-            text(batch, settings_x + 14.0, section_y + 42.0, "Configure the selected panel", muted);
+    fill(batch, settings_x + 10.0, content_y + 10.0, settings_w - 20.0, 56.0, card);
+    fill(batch, settings_x + 24.0, content_y + 20.0, 36.0, 36.0, purple);
+    text(batch, settings_x + 72.0, content_y + 34.0, &format!("Panel {:02}", selected + 1), white);
+    text(
+        batch,
+        settings_x + 72.0,
+        content_y + 51.0,
+        if follow { "Follow mode" } else { "Keep mode" },
+        muted,
+    );
 
-            let mode_y = section_y + 50.0;
-            let mode_open = crate::game::chetars_spatial_gui::dropdown_open();
-            let mode_over = pointer[0] >= row_left && pointer[0] <= row_left + row_w
-                && pointer[1] >= mode_y && pointer[1] <= mode_y + 36.0;
-            fill(batch, row_left, mode_y, row_w, 36.0, if mode_open || mode_over { card_hover } else { card_alt });
-            text(batch, row_left + 12.0, mode_y + 23.0, "FOLLOW / KEEP", bright);
-            text(batch, row_left + row_w - 88.0, mode_y + 23.0, mode_label, blue);
-            text(batch, row_left + row_w - 18.0, mode_y + 23.0,
-                if mode_open { "^" } else { "v" }, white);
-            if mode_over { settings_action = 1; }
+    let switch_x = settings_x + settings_w - 76.0;
+    fill(batch, switch_x, content_y + 22.0, 48.0, 26.0, if follow { blue } else { off });
+    fill(batch, switch_x + if follow { 25.0 } else { 3.0 }, content_y + 25.0, 20.0, 20.0, white);
 
-            if mode_open {
-                let option_y = section_y + 94.0;
-                for (i, label_text) in ["FOLLOW", "KEEP AT COORDINATES"].iter().enumerate() {
-                    let oy = option_y + i as f32 * 34.0;
-                    let over = pointer[0] >= row_left + 8.0 && pointer[0] <= row_left + row_w - 8.0
-                        && pointer[1] >= oy && pointer[1] <= oy + 30.0;
-                    fill(batch, row_left + 8.0, oy, row_w - 16.0, 30.0,
-                        if over { card_hover } else if (i == 0) == follow { 0xFF514C86 } else { card });
-                    text(batch, row_left + 20.0, oy + 20.0, label_text, white);
-                    if over { settings_action = if i == 0 { 2 } else { 3 }; }
-                }
-            }
+    text(batch, row_left, content_y + 92.0, "GENERAL", blue);
 
-            let two_d_y = section_y + 176.0;
-            let two_d = crate::game::chetars_spatial_gui::is_2d_mode();
-            let two_over = pointer[0] >= row_left && pointer[0] <= row_left + row_w
-                && pointer[1] >= two_d_y && pointer[1] <= two_d_y + 36.0;
-            fill(batch, row_left, two_d_y, row_w, 36.0, if two_over { card_hover } else { card_alt });
-            text(batch, row_left + 12.0, two_d_y + 23.0, "2D OVERLAY", bright);
-            let sw_x = row_left + row_w - 58.0;
-            fill(batch, sw_x, two_d_y + 5.0, 46.0, 26.0, if two_d { purple } else { 0xFF4A5367 });
-            fill(batch, sw_x + if two_d { 23.0 } else { 3.0 }, two_d_y + 8.0, 20.0, 20.0, white);
-            if two_over { settings_action = 4; }
+    // Follow / Keep is the existing mode function, not a new module toggle.
+    let mode_y = content_y + 108.0;
+    let mode_over = pointer[0] >= row_left && pointer[0] <= row_left + row_w
+        && pointer[1] >= mode_y && pointer[1] <= mode_y + 38.0;
+    fill(batch, row_left, mode_y, row_w, 38.0, if mode_over { hover } else { card });
+    text(batch, row_left + 14.0, mode_y + 24.0, "Placement mode", bright);
+    text(batch, row_left + row_w - 122.0, mode_y + 24.0, if follow { "FOLLOW" } else { "KEEP" }, blue);
+    text(batch, row_left + row_w - 20.0, mode_y + 24.0, "v", white);
 
-            let distance_y = section_y + 224.0;
-            fill(batch, row_left, distance_y, row_w, 38.0, card_alt);
-            text(batch, row_left + 12.0, distance_y + 24.0, "DISTANCE", bright);
-            text(batch, row_left + row_w - 148.0, distance_y + 24.0, &format!("{:.1}", distance), white);
-            let minus_x = settings_x + settings_w - 100.0;
-            let plus_x = settings_x + settings_w - 54.0;
-            let minus_over = pointer[0] >= minus_x && pointer[0] <= minus_x + 38.0
-                && pointer[1] >= distance_y + 3.0 && pointer[1] <= distance_y + 35.0;
-            let plus_over = pointer[0] >= plus_x && pointer[0] <= plus_x + 38.0
-                && pointer[1] >= distance_y + 3.0 && pointer[1] <= distance_y + 35.0;
-            fill(batch, minus_x, distance_y + 3.0, 38.0, 32.0, if minus_over { card_hover } else { card });
-            fill(batch, plus_x, distance_y + 3.0, 38.0, 32.0, if plus_over { card_hover } else { card });
-            text(batch, minus_x + 15.0, distance_y + 24.0, "-", white);
-            text(batch, plus_x + 15.0, distance_y + 24.0, "+", white);
-            if minus_over { settings_action = 5; }
-            if plus_over { settings_action = 6; }
-            text(batch, row_left, section_y + 288.0, "RESIZE WITH THE DOTTED CORNER GRIP", muted);
+    if crate::game::chetars_spatial_gui::dropdown_open() {
+        let option_y = mode_y + 43.0;
+        for (i, label) in ["FOLLOW", "KEEP AT COORDINATES"].iter().enumerate() {
+            let oy = option_y + i as f32 * 34.0;
+            let over = pointer[0] >= row_left + 6.0 && pointer[0] <= row_left + row_w - 6.0
+                && pointer[1] >= oy && pointer[1] <= oy + 30.0;
+            fill(batch, row_left + 6.0, oy, row_w - 12.0, 30.0, if over { hover } else { card2 });
+            text(batch, row_left + 16.0, oy + 20.0, label, white);
         }
     }
 
-    // Compact status and real keyboard/mouse shortcuts.
-    let info_y = section_y;
-    let info_card_x = info_x + 8.0;
-    let info_card_w = info_w - 16.0;
-    fill(batch, info_card_x, info_y + 10.0, info_card_w, 150.0, card);
-    text(batch, info_x + 18.0, info_y + 32.0, "PANEL STATUS", white);
-    text(batch, info_x + 18.0, info_y + 60.0,
-        &format!("{:02} / 10 ACTIVE", selected + 1), blue);
-    text(batch, info_x + 18.0, info_y + 86.0,
-        if follow { "FOLLOW MODE" } else { "KEEP MODE" }, bright);
-    text(batch, info_x + 18.0, info_y + 112.0, &format!("{:.1} BLOCKS", distance), muted);
-    text(batch, info_x + 18.0, info_y + 136.0, &format!("SCALE {}", scale_label), muted);
+    let mode_action = if mode_over { 1 } else { 0 };
 
-    let quick_y = info_y + 172.0;
-    let quick_h = (section_y + section_h - quick_y - 10.0).max(104.0);
-    fill(batch, info_card_x, quick_y, info_card_w, quick_h, card);
-    text(batch, info_x + 18.0, quick_y + 22.0, "QUICK CONTROLS", white);
-    for (i, (key, name)) in [
-        ("F6", "OPEN / CLOSE"),
+    // Distance control.
+    let distance_y = content_y + 174.0;
+    text(batch, row_left, distance_y, "DISTANCE", blue);
+    fill(batch, row_left, distance_y + 10.0, row_w, 34.0, card);
+    text(batch, row_left + 14.0, distance_y + 32.0, &format!("{:.2} blocks", distance), white);
+
+    let minus_x = row_left + row_w - 94.0;
+    let plus_x = row_left + row_w - 48.0;
+    let minus_over = pointer[0] >= minus_x && pointer[0] <= minus_x + 38.0
+        && pointer[1] >= distance_y + 11.0 && pointer[1] <= distance_y + 42.0;
+    let plus_over = pointer[0] >= plus_x && pointer[0] <= plus_x + 38.0
+        && pointer[1] >= distance_y + 11.0 && pointer[1] <= distance_y + 42.0;
+    fill(batch, minus_x, distance_y + 11.0, 38.0, 31.0, if minus_over { hover } else { card2 });
+    fill(batch, plus_x, distance_y + 11.0, 38.0, 31.0, if plus_over { hover } else { card2 });
+    text(batch, minus_x + 14.0, distance_y + 32.0, "-", white);
+    text(batch, plus_x + 14.0, distance_y + 32.0, "+", white);
+
+    // 2D/3D switch.
+    let overlay_y = content_y + 242.0;
+    let two_d = crate::game::chetars_spatial_gui::is_2d_mode();
+    text(batch, row_left, overlay_y, "DISPLAY", blue);
+    fill(batch, row_left, overlay_y + 10.0, row_w, 38.0, card);
+    text(batch, row_left + 14.0, overlay_y + 34.0, "2D overlay", bright);
+    let sw_x = row_left + row_w - 58.0;
+    fill(batch, sw_x, overlay_y + 16.0, 46.0, 26.0, if two_d { purple } else { off });
+    fill(batch, sw_x + if two_d { 23.0 } else { 3.0 }, overlay_y + 19.0, 20.0, 20.0, white);
+
+    // Scale.
+    let scale_y = content_y + 306.0;
+    fill(batch, row_left, scale_y, row_w, 38.0, card);
+    text(batch, row_left + 14.0, scale_y + 24.0, "Panel size", bright);
+    text(batch, row_left + row_w - 58.0, scale_y + 24.0, &scale_label, white);
+    text(batch, row_left, scale_y + 58.0, "Use the dotted corner grip to resize", muted);
+
+    // Far-right: Configs + Keybinds, matching the supplied reference.
+    let info_left = info_x + 14.0;
+    let info_w_inner = info_w - 28.0;
+
+    text(batch, info_left, content_y + 28.0, "Configs", white);
+    let config_names = ["default", "panel-safe", "night"];
+    for i in 0..3 {
+        let cy = content_y + 46.0 + i as f32 * 58.0;
+        fill(batch, info_left, cy, info_w_inner, 48.0, card);
+        text(batch, info_left + 14.0, cy + 21.0, config_names[i], white);
+        text(batch, info_left + 14.0, cy + 38.0, ["active", "saved", "saved"][i], muted);
+    }
+
+    let key_y = content_y + 236.0;
+    text(batch, info_left, key_y, "Keybinds", white);
+    let keybinds = [
+        ("F6", "Open / Close"),
         ("F7", "2D / 3D"),
-        ("RMB", "ORBIT"),
-        ("LMB", "RESIZE"),
-        ("WHEEL", "DISTANCE"),
-    ].iter().enumerate() {
-        let ky = quick_y + 48.0 + i as f32 * 32.0;
-        text(batch, info_x + 18.0, ky, key, blue);
-        text(batch, info_x + 66.0, ky, name, bright);
+        ("RMB", "Orbit"),
+        ("LMB", "Resize"),
+        ("WHEEL", "Distance"),
+    ];
+    for (i, (key, name)) in keybinds.iter().enumerate() {
+        let ky = key_y + 28.0 + i as f32 * 32.0;
+        text(batch, info_left, ky, name, bright);
+        fill(batch, info_left + info_w_inner - 64.0, ky - 17.0, 60.0, 24.0, card2);
+        text(batch, info_left + info_w_inner - 52.0, ky, key, white);
     }
 
-    // Publish the current hover action after all hit regions have been tested.
-    let action = if header_action != 0 { header_action }
-        else if hovered_panel_action != 0 { hovered_panel_action }
-        else { settings_action };
+    // Existing menu actions are mapped to the same runtime functions as before.
+    let mut action = 0u8;
+    if grip_over {
+        action = 11;
+    } else if minus_over {
+        action = 5;
+    } else if plus_over {
+        action = 6;
+    } else if mode_action != 0 {
+        action = mode_action;
+    } else if pointer[0] >= row_left && pointer[0] <= row_left + row_w
+        && pointer[1] >= overlay_y + 10.0 && pointer[1] <= overlay_y + 48.0 {
+        action = 4;
+    } else if hovered_panel_action != 0 {
+        action = hovered_panel_action;
+    }
+
     crate::game::chetars_spatial_gui::set_hovered_mode_action(action);
 
-    // A custom pointer is painted last so it remains visible on capture transitions.
+    // Keep the custom pointer visible when Minecraft's capture state changes.
     let cx = pointer[0].clamp(0.0, width - 2.0);
     let cy = pointer[1].clamp(0.0, height - 2.0);
     for step in 0..11 {
@@ -359,4 +428,9 @@ fn render(
             fill(batch, cx + step as f32 + 1.0, cy + step as f32 + 1.0, 1.0, 1.0, white);
         }
     }
+
+    crate::game::chetars_spatial_gui::set_2d_pointer_over(
+        pointer[0] >= x && pointer[0] <= x + panel_w
+            && pointer[1] >= y && pointer[1] <= y + panel_h,
+    );
 }
