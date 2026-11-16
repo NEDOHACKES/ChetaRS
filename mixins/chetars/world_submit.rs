@@ -244,56 +244,105 @@ fn world_submit(
             }
             crate::game::chetars_spatial_gui::set_hovered_navigation(nav);
 
-            let left = panel.white_area[0][0];
-            let top = panel.white_area[0][1];
-            let right = panel.white_area[1][0];
-            let mode_y = top + 26.0;
-            let row_left = left + 22.0;
-            let row_right = right - 22.0;
             let resize_size = 30.0;
             let over_resize = screen_x >= panel.body[0][0] + 3.0
                 && screen_x <= panel.body[0][0] + resize_size
                 && screen_y >= panel.body[0][1] + 3.0
                 && screen_y <= panel.body[0][1] + resize_size;
-                if over_resize {
+            if over_resize {
                 crate::game::chetars_spatial_gui::set_hovered_resize_panel(Some(panel_index));
             }
 
-            let mut action = if over_resize { 11u8 } else { 0u8 };
-            if crate::game::chetars_spatial_gui::selected_button() == 2 {
-                if screen_x >= row_left && screen_x <= row_right
-                    && screen_y >= mode_y && screen_y <= mode_y + 38.0
-                {
-                    action = 1;
+            let header_left = panel.header[0][0];
+            let header_right = panel.header[1][0];
+            let arrow_y = panel.header[0][1] + 9.0;
+            let prev_x = header_left + 244.0;
+            let next_x = header_left + 280.0;
+            let over_prev = screen_x >= prev_x && screen_x <= prev_x + 28.0
+                && screen_y >= arrow_y && screen_y <= arrow_y + 30.0;
+            let over_next = screen_x >= next_x && screen_x <= next_x + 28.0
+                && screen_y >= arrow_y && screen_y <= arrow_y + 30.0;
+
+            let list_top = panel.content_frame[0][1] + 58.0;
+            let list_bottom = panel.content_frame[2][1] - 10.0;
+            let row_gap = 4.0;
+            let row_h = ((list_bottom - list_top - row_gap * 9.0) / 10.0).clamp(22.0, 34.0);
+            let list_left = panel.content_frame[0][0] + 8.0;
+            let list_right = panel.content_frame[1][0] - 8.0;
+            let mut action = if over_resize { 11u8 }
+                else if over_prev { 8 }
+                else if over_next { 9 }
+                else { 0 };
+
+            // Each visible row selects the corresponding independent 3D panel.
+            let mut visible_row = 0usize;
+            for target in 0..crate::game::chetars_spatial_gui::max_panels() {
+                if !crate::game::chetars_spatial_gui::panel_exists(target) {
+                    continue;
                 }
+                let row_y = list_top + visible_row as f32 * (row_h + row_gap);
+                visible_row += 1;
+                if screen_x >= list_left && screen_x <= list_right
+                    && screen_y >= row_y && screen_y <= row_y + row_h
+                {
+                    action = 12 + target as u8;
+                }
+            }
+
+            if crate::game::chetars_spatial_gui::selected_button() == 2 {
+                let left = panel.white_area[0][0];
+                let top = panel.white_area[0][1];
+                let right = panel.white_area[1][0];
+                let row_left = left + 12.0;
+                let row_right = right - 12.0;
+
+                let mode_y = top + 50.0;
+                let mode_over = screen_x >= row_left && screen_x <= row_right
+                    && screen_y >= mode_y && screen_y <= mode_y + 36.0;
+                if mode_over { action = 1; }
 
                 if crate::game::chetars_spatial_gui::dropdown_open() {
-                    let option_y = top + 70.0;
-                    if screen_x >= row_left && screen_x <= row_right
-                        && screen_y >= option_y && screen_y <= option_y + 32.0
+                    let option_y = top + 94.0;
+                    if screen_x >= row_left + 8.0 && screen_x <= row_right - 8.0
+                        && screen_y >= option_y && screen_y <= option_y + 30.0
                     { action = 2; }
-                    else if screen_x >= row_left && screen_x <= row_right
-                        && screen_y >= option_y + 36.0 && screen_y <= option_y + 68.0
+                    else if screen_x >= row_left + 8.0 && screen_x <= row_right - 8.0
+                        && screen_y >= option_y + 34.0 && screen_y <= option_y + 64.0
                     { action = 3; }
                 }
 
-                let two_d_y = top + 148.0;
+                let two_d_y = top + 176.0;
                 if screen_x >= row_left && screen_x <= row_right
-                    && screen_y >= two_d_y && screen_y <= two_d_y + 34.0
+                    && screen_y >= two_d_y && screen_y <= two_d_y + 36.0
                 { action = 4; }
 
-                let distance_y = top + 192.0;
-                let minus_x = right - 112.0;
-                let plus_x = right - 58.0;
-                if screen_y >= distance_y && screen_y <= distance_y + 36.0
-                    && screen_x >= minus_x && screen_x <= minus_x + 42.0
+                let distance_y = top + 224.0;
+                let minus_x = right - 100.0;
+                let plus_x = right - 54.0;
+                if screen_y >= distance_y && screen_y <= distance_y + 38.0
+                    && screen_x >= minus_x && screen_x <= minus_x + 38.0
                 { action = 5; }
-                else if screen_y >= distance_y && screen_y <= distance_y + 36.0
-                    && screen_x >= plus_x && screen_x <= plus_x + 42.0
+                else if screen_y >= distance_y && screen_y <= distance_y + 38.0
+                    && screen_x >= plus_x && screen_x <= plus_x + 38.0
                 { action = 6; }
             }
+
+            let add_x = header_right - 112.0;
+            let add_y = panel.header[0][1] + 9.0;
+            let over_add = crate::game::chetars_spatial_gui::panel_count()
+                < crate::game::chetars_spatial_gui::max_panels()
+                && screen_x >= add_x && screen_x <= add_x + 34.0
+                && screen_y >= add_y && screen_y <= add_y + 30.0;
+            let close_x = add_x + 40.0;
+            let over_close = crate::game::chetars_spatial_gui::panel_count() > 1
+                && screen_x >= close_x && screen_x <= close_x + 34.0
+                && screen_y >= add_y && screen_y <= add_y + 30.0;
+            crate::game::chetars_spatial_gui::set_hovered_add(over_add);
             crate::game::chetars_spatial_gui::set_hovered_mode_action(
-                if over_close { 10 } else if over_add { 7 } else { action }
+                if over_resize { 11 }
+                else if over_close { 10 }
+                else if over_add { 7 }
+                else { action }
             );
         }
     }
@@ -347,238 +396,256 @@ fn world_submit(
     };
 
     let draw_face = |game: &crate::game::Game<'_>, draw: &mut NativeWorldDraw| {
-        paint(game, draw, panel.shadow, 0x99000000);
+        let bg = 0xFF141A2A;
+        let card = 0xFF242D43;
+        let card_alt = 0xFF2C3650;
+        let card_hover = 0xFF3C4567;
+        let purple = 0xFF7C5CFF;
+        let blue = 0xFF6EA8FF;
+        let bright = 0xFFB8C2FF;
+        let muted = 0xFF8794BA;
+        let white = 0xFFF2F4FF;
+
+        paint(game, draw, panel.shadow, 0xAA000000);
         let side_faces = [
             [panel.body[0], panel.body[1], panel.shadow[1], panel.shadow[0]],
             [panel.body[1], panel.body[2], panel.shadow[2], panel.shadow[1]],
             [panel.body[2], panel.body[3], panel.shadow[3], panel.shadow[2]],
             [panel.body[3], panel.body[0], panel.shadow[0], panel.shadow[3]],
         ];
-        for side in side_faces {
-            paint(game, draw, side, 0xFF080A0D);
-        }
+        for side in side_faces { paint(game, draw, side, 0xFF0B1020); }
 
-        paint(game, draw, panel.body, 0xFF101010);
-        paint(game, draw, panel.inner, 0xFF1E1E1E);
-        paint(game, draw, panel.header, 0xFF101010);
+        paint(game, draw, panel.body, bg);
+        paint(game, draw, panel.inner, 0xFF1B2336);
+        paint(game, draw, panel.header, 0xFF202940);
+        paint(game, draw, panel.sidebar, 0xFF202A40);
+        paint(game, draw, panel.content_frame, 0xFF202A40);
+        paint(game, draw, panel.white_area, 0xFF242D43);
+        paint(game, draw, panel.info_frame, 0xFF202A40);
+        paint(game, draw, panel.accent_left, purple);
+        paint(game, draw, panel.accent_top, blue);
 
-        // Dotted triangular handle at the upper-left corner resizes this 3D panel.
+        // Dotted triangular grip remains in the same top-left position.
         let resize_color = if crate::game::chetars_spatial_gui::hovered_resize_panel() == Some(panel_index)
             || crate::game::chetars_spatial_gui::is_3d_resizing_for(panel_index)
-        { 0xFF55C7FF } else { 0xFFB8C5D1 };
+        { blue } else { bright };
         for row in 0..5 {
             for col in 0..=row {
-                paint(
-                    game,
-                    draw,
-                    rect(
-                        panel.body[0][0] + 9.0 + col as f32 * 4.2,
-                        panel.body[0][1] + 9.0 + row as f32 * 4.2,
-                        2.2,
-                        2.2,
-                        13.0,
-                    ),
-                    resize_color,
-                );
+                paint(game, draw, rect(
+                    panel.body[0][0] + 9.0 + col as f32 * 4.2,
+                    panel.body[0][1] + 9.0 + row as f32 * 4.2,
+                    2.2, 2.2, 13.0,
+                ), resize_color);
             }
         }
 
-        let plus_x = panel.header[1][0] - 72.0;
-        let close_x = plus_x + 40.0;
-        let plus_y = panel.header[0][1] + 8.0;
+        // Header.
+        paint(game, draw, rect(panel.body[0][0] + 18.0, panel.body[0][1] + 15.0, 28.0, 28.0, 8.0), purple);
+        paint(game, draw, rect(panel.body[0][0] + 33.0, panel.body[0][1] + 15.0, 13.0, 28.0, 9.0), blue);
+        label(game, draw, panel.body[0][0] + 54.0, panel.body[0][1] + 24.0, "CHETARS", white);
+        label(game, draw, panel.body[0][0] + 116.0, panel.body[0][1] + 24.0, "SPATIAL CONTROL CENTER", muted);
+
+        let header_left = panel.header[0][0];
+        let header_right = panel.header[1][0];
+        let arrow_y = panel.header[0][1] + 9.0;
+        let prev_x = header_left + 244.0;
+        let next_x = header_left + 280.0;
+        for (bx, symbol, action) in [(prev_x, "<", 8u8), (next_x, ">", 9u8)] {
+            let hovered = crate::game::chetars_spatial_gui::hovered_mode_action() == action;
+            paint(game, draw, rect(bx, arrow_y, 28.0, 30.0, 11.0),
+                if hovered { card_hover } else { card_alt });
+            label(game, draw, bx + 10.0, arrow_y + 20.0, symbol, white);
+        }
+
+        let add_x = header_right - 112.0;
+        let add_y = panel.header[0][1] + 9.0;
         let can_add = crate::game::chetars_spatial_gui::panel_count()
             < crate::game::chetars_spatial_gui::max_panels();
-        paint(
-            game,
-            draw,
-            rect(plus_x, plus_y, 34.0, 30.0, 12.0),
-            if !can_add { 0xFF272D34 }
-            else if crate::game::chetars_spatial_gui::hovered_panel() == Some(panel_index)
-                && crate::game::chetars_spatial_gui::hovered_add()
-            { 0xFF33AAFF } else { 0xFF303844 },
-        );
-        label(game, draw, plus_x + 12.0, plus_y + 21.0, "+", 0xFFFFFFFF);
-        paint(
-            game,
-            draw,
-            rect(close_x, plus_y, 34.0, 30.0, 12.0),
-            if crate::game::chetars_spatial_gui::hovered_panel() == Some(panel_index)
-                && crate::game::chetars_spatial_gui::hovered_mode_action() == 10
-            { 0xFFCC3344 } else { 0xFF303844 },
-        );
-        label(game, draw, close_x + 11.0, plus_y + 21.0, "x", 0xFFFFFFFF);
-        paint(game, draw, panel.sidebar, 0xFF1E1E1E);
-        paint(game, draw, panel.content_frame, 0xFF4A4A4A);
-        paint(game, draw, panel.white_area, 0xFFFFFFFF);
+        paint(game, draw, rect(add_x, add_y, 34.0, 30.0, 11.0),
+            if !can_add { 0xFF30394D }
+            else if crate::game::chetars_spatial_gui::hovered_add() { purple }
+            else { card_alt });
+        label(game, draw, add_x + 12.0, add_y + 20.0, "+", white);
+        let close_x = add_x + 40.0;
+        paint(game, draw, rect(close_x, add_y, 34.0, 30.0, 11.0),
+            if crate::game::chetars_spatial_gui::hovered_mode_action() == 10 { 0xFFB84B66 } else { card_alt });
+        label(game, draw, close_x + 12.0, add_y + 20.0, "x", white);
 
-        for i in 0..3 {
-            let color = if crate::game::chetars_spatial_gui::selected_button() == i {
-                0xFF33AAFF
-            } else {
-                0xFF2C2C2C
-            };
-            paint(game, draw, panel.buttons[i], color);
+        label(game, draw, panel.body[0][0] + 22.0, panel.body[0][1] + 64.0,
+            &format!("PANEL {} / {}", panel_index + 1, crate::game::chetars_spatial_gui::panel_count()), muted);
+
+        // Left navigation rail.
+        for (i, name) in ["OVERVIEW", "PROFILE", "SETTINGS"].iter().enumerate() {
+            let bx = panel.buttons[i][0][0];
+            let by = panel.buttons[i][0][1];
+            let active = crate::game::chetars_spatial_gui::selected_button() == i;
+            let hovered = crate::game::chetars_spatial_gui::hovered_navigation() == Some(i);
+            paint(game, draw, panel.buttons[i],
+                if active { 0xFF514C86 } else if hovered { card_hover } else { card });
+            if active {
+                paint(game, draw, rect(bx, by, 3.0, 38.0, 10.0), blue);
+            }
+            label(game, draw, bx + 12.0, by + 23.0, ["01", "02", "03"][i],
+                if active { blue } else { muted });
+            label(game, draw, bx + 40.0, by + 23.0, name,
+                if active || hovered { white } else { bright });
         }
-        paint(game, draw, panel.accent_left, 0xFF33AAFF);
-        paint(game, draw, panel.accent_top, 0xFF33AAFF);
+        label(game, draw, panel.sidebar[0][0] + 12.0, panel.sidebar[3][1] - 28.0,
+            "WORLD UI", muted);
 
-        label(game, draw, panel.body[0][0] + 48.0, panel.body[0][1] + 22.0, "CHETARS", 0xFFFFFFFF);
-        label(
-            game,
-            draw,
-            panel.body[0][0] + 110.0,
-            panel.body[0][1] + 24.0,
-            &format!(
-                "PANEL {} / {}",
-                panel_index + 1,
-                crate::game::chetars_spatial_gui::panel_count()
-            ),
-            0xFFCCCCCC,
-        );
-
-        for (i, text) in ["HOME", "PROFILE", "SETTINGS"].iter().enumerate() {
-            let x = panel.buttons[i][0][0] + 14.0;
-            let y = panel.buttons[i][0][1] + 12.0;
-            label(
-                game,
-                draw,
-                x,
-                y,
-                text,
-                if crate::game::chetars_spatial_gui::selected_button() == i {
-                    0xFFFFFFFF
-                } else if crate::game::chetars_spatial_gui::hovered_navigation() == Some(i) {
-                    0xFF33AAFF
-                } else {
-                    0xFFCCCCCC
-                },
-            );
+        // Panel list column.
+        let list_x = panel.content_frame[0][0];
+        let list_y = panel.content_frame[0][1];
+        let list_w = panel.content_frame[1][0] - list_x;
+        label(game, draw, list_x + 12.0, list_y + 23.0, "SPATIAL PANELS", white);
+        label(game, draw, list_x + 12.0, list_y + 40.0, "Select one to edit", muted);
+        let rows_top = list_y + 58.0;
+        let rows_bottom = panel.content_frame[2][1] - 10.0;
+        let row_gap = 4.0;
+        let row_h = ((rows_bottom - rows_top - row_gap * 9.0) / 10.0).clamp(22.0, 34.0);
+        let mut visible_row = 0usize;
+        for target in 0..crate::game::chetars_spatial_gui::max_panels() {
+            if !crate::game::chetars_spatial_gui::panel_exists(target) { continue; }
+            let ry = rows_top + visible_row as f32 * (row_h + row_gap);
+            visible_row += 1;
+            let selected = crate::game::chetars_spatial_gui::selected_panel() as usize == target;
+            let hovered = crate::game::chetars_spatial_gui::hovered_panel() == Some(panel_index)
+                && crate::game::chetars_spatial_gui::hovered_mode_action() == 12 + target as u8;
+            paint(game, draw, rect(list_x + 8.0, ry, list_w - 16.0, row_h, 9.0),
+                if selected { 0xFF454A78 } else if hovered { card_hover } else { card_alt });
+            paint(game, draw, rect(list_x + 8.0, ry, 3.0, row_h, 10.0),
+                if selected { blue } else { purple });
+            label(game, draw, list_x + 18.0, ry + row_h * 0.62,
+                &format!("PANEL {:02}", target + 1),
+                if selected { white } else { bright });
+            let mode = if crate::game::chetars_spatial_gui::selected_panel() as usize == target {
+                if crate::game::chetars_spatial_gui::follow_mode() { "FOLLOW" } else { "KEEP" }
+            } else { "READY" };
+            label(game, draw, list_x + list_w - 58.0, ry + row_h * 0.62, mode, muted);
         }
 
-        let left = panel.white_area[0][0];
-        let top = panel.white_area[0][1];
-        let right = panel.white_area[1][0];
-        let row_x = left + 22.0;
-        let row_width = (right - left - 44.0).max(120.0);
-        let mode = if crate::game::chetars_spatial_gui::follow_mode() {
-            "FOLLOW ME"
-        } else {
-            "KEEP AT COORDINATES"
-        };
-        let distance_text = format!(
-            "{:.1} BLOCKS",
-            crate::game::chetars_spatial_gui::panel_distance()
-        );
+        // Main content column.
+        let settings_left = panel.white_area[0][0];
+        let settings_top = panel.white_area[0][1];
+        let settings_right = panel.white_area[1][0];
+        let settings_w = settings_right - settings_left;
+        let row_left = settings_left + 12.0;
+        let row_w = settings_w - 24.0;
+        let follow = crate::game::chetars_spatial_gui::follow_mode();
+        let mode_label = if follow { "FOLLOW" } else { "KEEP" };
+        let distance_label = format!("{:.1} BLOCKS", crate::game::chetars_spatial_gui::panel_distance());
+        let scale_label = format!("{:.0}%", crate::game::chetars_spatial_gui::panel_scale() * 100.0);
 
         match crate::game::chetars_spatial_gui::selected_button() {
             0 => {
-                // HOME is now a usable function catalogue instead of an empty
-                // white rectangle.
-                label(game, draw, row_x, top + 16.0, "FUNCTION CATALOG", 0xFF303844);
+                label(game, draw, settings_left + 14.0, settings_top + 24.0, "OVERVIEW", white);
+                label(game, draw, settings_left + 14.0, settings_top + 42.0, "Your spatial workspace", muted);
                 let cards = [
-                    (
-                        top + 38.0,
-                        "3D WORLD DISPLAY",
-                        "Floating panel, independent from the inventory",
-                    ),
-                    (
-                        top + 98.0,
-                        "ORBIT DRAG",
-                        "Hold RMB on the title bar and turn around",
-                    ),
-                    (
-                        top + 158.0,
-                        "DISTANCE CONTROL",
-                        "Scroll on the title bar or use Settings + / -",
-                    ),
+                    (settings_top + 64.0, "3D WORLD PANELS", "Floating displays in your world"),
+                    (settings_top + 124.0, "360 ORBIT CONTROL", "Hold RMB on a panel header"),
+                    (settings_top + 184.0, "INDEPENDENT PANELS", "Each panel keeps its own position"),
                 ];
-                for (y, title, detail) in cards {
-                    paint(game, draw, rect(row_x, y, row_width, 48.0, 9.0), 0xFFF2F4F7);
-                    paint(game, draw, rect(row_x, y, 3.0, 48.0, 10.0), 0xFF33AAFF);
-                    label(game, draw, row_x + 12.0, y + 14.0, title, 0xFF202833);
-                    label(game, draw, row_x + 12.0, y + 32.0, detail, 0xFF687482);
+                for (cy, title, detail) in cards {
+                    paint(game, draw, rect(row_left, cy, row_w, 48.0, 9.0), card_alt);
+                    paint(game, draw, rect(row_left, cy, 3.0, 48.0, 10.0), purple);
+                    label(game, draw, row_left + 12.0, cy + 17.0, title, white);
+                    label(game, draw, row_left + 12.0, cy + 35.0, detail, muted);
                 }
+                label(game, draw, row_left, settings_top + 270.0,
+                    &format!("ACTIVE PANELS: {} / {}", crate::game::chetars_spatial_gui::panel_count(), crate::game::chetars_spatial_gui::max_panels()), bright);
             }
             1 => {
-                // PROFILE reports the active placement configuration and
-                // the controls that affect this panel.
-                label(game, draw, row_x, top + 16.0, "PANEL PROFILE", 0xFF303844);
+                label(game, draw, settings_left + 14.0, settings_top + 24.0, "PANEL PROFILE", white);
+                label(game, draw, settings_left + 14.0, settings_top + 42.0, "Selected display details", muted);
                 let cards = [
-                    (top + 42.0, "PLACEMENT MODE", mode),
-                    (top + 104.0, "CURRENT DISTANCE", distance_text.as_str()),
-                    (top + 166.0, "MOVEMENT", "RMB drag orbits around the player"),
+                    (settings_top + 68.0, "PLACEMENT MODE", mode_label),
+                    (settings_top + 132.0, "PANEL DISTANCE", distance_label.as_str()),
+                    (settings_top + 196.0, "PANEL SCALE", scale_label.as_str()),
                 ];
-                for (y, title, detail) in cards {
-                    paint(game, draw, rect(row_x, y, row_width, 48.0, 9.0), 0xFFF2F4F7);
-                    paint(game, draw, rect(row_x, y, 3.0, 48.0, 10.0), 0xFF33AAFF);
-                    label(game, draw, row_x + 12.0, y + 14.0, title, 0xFF202833);
-                    label(game, draw, row_x + 12.0, y + 32.0, detail, 0xFF687482);
+                for (cy, title, value) in cards {
+                    paint(game, draw, rect(row_left, cy, row_w, 48.0, 9.0), card_alt);
+                    label(game, draw, row_left + 12.0, cy + 17.0, title, muted);
+                    label(game, draw, row_left + 12.0, cy + 36.0, value, white);
                 }
+                label(game, draw, row_left, settings_top + 280.0,
+                    "RMB ORBIT KEEPS THE PANEL UPRIGHT", bright);
             }
-            2 => {
-                let mode_y = top + 26.0;
-                let mode_text = if crate::game::chetars_spatial_gui::follow_mode() {
-                    "FOLLOW"
-                } else {
-                    "KEEP"
-                };
-                let open = crate::game::chetars_spatial_gui::dropdown_open();
-                paint(game, draw, rect(row_x, mode_y, row_width, 38.0, 9.0),
-                    if open { 0xFFEAF5FF } else { 0xFFF2F4F7 });
-                label(game, draw, row_x + 12.0, mode_y + 24.0, "FOLLOW / KEEP", 0xFF202833);
-                label(game, draw, row_x + row_width - 118.0, mode_y + 24.0, mode_text, 0xFF303844);
-                label(game, draw, row_x + row_width - 34.0, mode_y + 24.0,
-                    if open { "^" } else { "v" }, 0xFF303844);
+            _ => {
+                label(game, draw, settings_left + 14.0, settings_top + 24.0, "DISPLAY SETTINGS", white);
+                label(game, draw, settings_left + 14.0, settings_top + 42.0, "Configure the selected panel", muted);
 
-                if open {
-                    let option_y = top + 70.0;
-                    let follow_color = if crate::game::chetars_spatial_gui::follow_mode() { 0xFFDCEEFF } else { 0xFFF2F4F7 };
-                    let keep_color = if !crate::game::chetars_spatial_gui::follow_mode() { 0xFFDCEEFF } else { 0xFFF2F4F7 };
-                    paint(game, draw, rect(row_x + 16.0, option_y, row_width - 16.0, 32.0, 9.0), follow_color);
-                    label(game, draw, row_x + 28.0, option_y + 21.0, "FOLLOW", 0xFF202833);
-                    paint(game, draw, rect(row_x + 16.0, option_y + 36.0, row_width - 16.0, 32.0, 9.0), keep_color);
-                    label(game, draw, row_x + 28.0, option_y + 57.0, "KEEP", 0xFF202833);
+                let mode_y = settings_top + 50.0;
+                let mode_open = crate::game::chetars_spatial_gui::dropdown_open();
+                paint(game, draw, rect(row_left, mode_y, row_w, 36.0, 9.0),
+                    if mode_open { 0xFF3A4564 } else { card_alt });
+                label(game, draw, row_left + 12.0, mode_y + 23.0, "FOLLOW / KEEP", bright);
+                label(game, draw, row_left + row_w - 88.0, mode_y + 23.0, mode_label, blue);
+                label(game, draw, row_left + row_w - 18.0, mode_y + 23.0,
+                    if mode_open { "^" } else { "v" }, white);
+
+                if mode_open {
+                    let option_y = settings_top + 94.0;
+                    paint(game, draw, rect(row_left + 8.0, option_y, row_w - 16.0, 30.0, 10.0),
+                        if follow { 0xFF514C86 } else { card });
+                    label(game, draw, row_left + 20.0, option_y + 20.0, "FOLLOW", white);
+                    paint(game, draw, rect(row_left + 8.0, option_y + 34.0, row_w - 16.0, 30.0, 10.0),
+                        if !follow { 0xFF514C86 } else { card });
+                    label(game, draw, row_left + 20.0, option_y + 54.0, "KEEP AT COORDINATES", white);
                 }
 
-                let two_d_y = top + 148.0;
+                let two_d_y = settings_top + 176.0;
                 let two_d = crate::game::chetars_spatial_gui::is_2d_mode();
-                let two_progress = crate::game::chetars_spatial_gui::two_d_progress();
-                paint(game, draw, rect(row_x, two_d_y, row_width, 34.0, 9.0), 0xFFF2F4F7);
-                label(game, draw, row_x + 12.0, two_d_y + 22.0, "2D PANEL", 0xFF202833);
+                paint(game, draw, rect(row_left, two_d_y, row_w, 36.0, 9.0), card_alt);
+                label(game, draw, row_left + 12.0, two_d_y + 23.0, "2D OVERLAY", bright);
+                let sw_x = row_left + row_w - 58.0;
+                paint(game, draw, rect(sw_x, two_d_y + 5.0, 46.0, 26.0, 12.0),
+                    if two_d { purple } else { 0xFF4A5367 });
+                paint(game, draw, rect(sw_x + if two_d { 23.0 } else { 3.0 }, two_d_y + 8.0, 20.0, 20.0, 13.0), white);
 
-                // Independent presentation switch; it does not alter Follow / Keep.
-                let switch_x = row_x + row_width - 66.0;
-                let switch_y = two_d_y + 4.0;
-                let switch_w = 50.0;
-                let switch_h = 26.0;
-                paint(game, draw, rect(switch_x, switch_y, switch_w, switch_h, 13.0),
-                    if two_d { 0xFF167D48 } else { 0xFF8A949E });
-                let knob_x = switch_x + 3.0 + two_progress * (switch_w - 20.0);
-                paint(game, draw, rect(knob_x, switch_y + 3.0, 20.0, 20.0, 10.0), 0xFFFFFFFF);
-
-                let distance_y = top + 192.0;
-                paint(game, draw, rect(row_x, distance_y, row_width, 36.0, 9.0), 0xFFF2F4F7);
-                label(game, draw, row_x + 12.0, distance_y + 23.0, "DISTANCE", 0xFF202833);
-                let distance_text = format!("{:.1}", crate::game::chetars_spatial_gui::panel_distance());
-                label(game, draw, row_x + row_width - 156.0, distance_y + 23.0, distance_text.as_str(), 0xFF303844);
-                let minus_x = right - 112.0;
-                let plus_x = right - 58.0;
-                paint(game, draw, rect(minus_x, distance_y + 2.0, 42.0, 32.0, 11.0), 0xFF4B5563);
-                paint(game, draw, rect(plus_x, distance_y + 2.0, 42.0, 32.0, 11.0), 0xFF4B5563);
-                label(game, draw, minus_x + 15.0, distance_y + 23.0, "-", 0xFFFFFFFF);
-                label(game, draw, plus_x + 14.0, distance_y + 23.0, "+", 0xFFFFFFFF);
+                let distance_y = settings_top + 224.0;
+                paint(game, draw, rect(row_left, distance_y, row_w, 38.0, 9.0), card_alt);
+                label(game, draw, row_left + 12.0, distance_y + 24.0, "DISTANCE", bright);
+                label(game, draw, row_left + row_w - 148.0, distance_y + 24.0,
+                    &format!("{:.1}", crate::game::chetars_spatial_gui::panel_distance()), white);
+                let minus_x = settings_right - 100.0;
+                let plus_x = settings_right - 54.0;
+                paint(game, draw, rect(minus_x, distance_y + 3.0, 38.0, 32.0, 11.0), card);
+                paint(game, draw, rect(plus_x, distance_y + 3.0, 38.0, 32.0, 11.0), card);
+                label(game, draw, minus_x + 15.0, distance_y + 23.0, "-", white);
+                label(game, draw, plus_x + 15.0, distance_y + 23.0, "+", white);
+                label(game, draw, row_left, settings_top + 288.0,
+                    "RESIZE WITH THE DOTTED CORNER GRIP", muted);
             }
-            _ => {}
         }
 
-        label(
-            game,
-            draw,
-            panel.body[3][0] + 22.0,
-            panel.body[3][1] - 22.0,
-            "AIM AT A CONTROL + LEFT CLICK  |  RMB ON TOP BAR TO ORBIT",
-            0xFFCCCCCC,
-        );
+        // Real status/shortcuts only; no fictional Configs or combat modules.
+        let info_x = panel.info_frame[0][0];
+        let info_y = panel.info_frame[0][1];
+        let info_w = panel.info_frame[1][0] - info_x;
+        paint(game, draw, rect(info_x + 8.0, info_y + 10.0, info_w - 16.0, 150.0, 9.0), card);
+        label(game, draw, info_x + 18.0, info_y + 32.0, "PANEL STATUS", white);
+        label(game, draw, info_x + 18.0, info_y + 60.0,
+            &format!("{:02} / 10 ACTIVE", panel_index + 1), blue);
+        label(game, draw, info_x + 18.0, info_y + 86.0,
+            if follow { "FOLLOW MODE" } else { "KEEP MODE" }, bright);
+        label(game, draw, info_x + 18.0, info_y + 112.0, distance_label.as_str(), muted);
+        label(game, draw, info_x + 18.0, info_y + 136.0, &format!("SCALE {}", scale_label), muted);
+
+        let quick_y = info_y + 172.0;
+        let quick_h = (panel.info_frame[3][1] - quick_y - 10.0).max(104.0);
+        paint(game, draw, rect(info_x + 8.0, quick_y, info_w - 16.0, quick_h, 9.0), card);
+        label(game, draw, info_x + 18.0, quick_y + 22.0, "QUICK CONTROLS", white);
+        for (i, (key, name)) in [
+            ("F6", "OPEN / CLOSE"),
+            ("F7", "2D / 3D"),
+            ("RMB", "ORBIT"),
+            ("LMB", "RESIZE"),
+            ("WHEEL", "DISTANCE"),
+        ].iter().enumerate() {
+            let ky = quick_y + 48.0 + i as f32 * 32.0;
+            label(game, draw, info_x + 18.0, ky, key, blue);
+            label(game, draw, info_x + 66.0, ky, name, bright);
+        }
     };
 
     draw.push();
