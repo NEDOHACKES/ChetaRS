@@ -103,6 +103,21 @@ fn mouse_button(
     let Some(index) = crate::game::chetars_spatial_gui::hovered_panel() else {
         return;
     };
+    // A panel card in the new four-column menu selects a different
+    // independent world panel. Handle this before selecting the 3D surface
+    // that currently owns the mouse ray.
+    let action = crate::game::chetars_spatial_gui::hovered_mode_action();
+    if (12..=21).contains(&action) {
+        let target = (action - 12) as usize;
+        if crate::game::chetars_spatial_gui::panel_exists(target) {
+            crate::game::chetars_spatial_gui::set_selected_panel(target);
+            crate::game::chetars_spatial_gui::load_panel(target);
+            crate::game::chetars_spatial_gui::save_panel(target);
+        }
+        *canceled = true;
+        return;
+    }
+
     crate::game::chetars_spatial_gui::set_selected_panel(index);
 
     // The close button removes the selected panel. Keep one panel alive so the
