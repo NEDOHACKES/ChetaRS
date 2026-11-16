@@ -335,7 +335,22 @@ fn render(
         }
     }
 
-    let mode_action = if mode_over { 1 } else { 0 };
+    let mode_action = if mode_over {
+        1
+    } else if crate::game::chetars_spatial_gui::dropdown_open() {
+        let option_y = mode_y + 43.0;
+        if pointer[0] >= row_left + 6.0 && pointer[0] <= row_left + row_w - 6.0
+            && pointer[1] >= option_y && pointer[1] <= option_y + 30.0 {
+            2
+        } else if pointer[0] >= row_left + 6.0 && pointer[0] <= row_left + row_w - 6.0
+            && pointer[1] >= option_y + 34.0 && pointer[1] <= option_y + 64.0 {
+            3
+        } else {
+            0
+        }
+    } else {
+        0
+    };
 
     // Distance control.
     let distance_y = content_y + 174.0;
@@ -402,7 +417,15 @@ fn render(
 
     // Existing menu actions are mapped to the same runtime functions as before.
     let mut action = 0u8;
-    if grip_over {
+    let header_close_over = pointer[0] >= close_x && pointer[0] <= close_x + 28.0
+        && pointer[1] >= header_y + 12.0 && pointer[1] <= header_y + 44.0;
+    let header_expand_over = pointer[0] >= expand_x && pointer[0] <= expand_x + 28.0
+        && pointer[1] >= header_y + 12.0 && pointer[1] <= header_y + 44.0;
+    if header_close_over {
+        action = 13;
+    } else if header_expand_over {
+        action = 14;
+    } else if grip_over {
         action = 11;
     } else if minus_over {
         action = 5;
