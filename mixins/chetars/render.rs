@@ -46,7 +46,7 @@ fn render(
     let section_x = x + 14.0;
     let section_y = y + 72.0;
     let section_h = panel_h - 86.0;
-    let gap = 8.0;
+    let gap = 10.0;
     let usable_w = panel_w - 28.0 - gap * 3.0;
     let sidebar_w = usable_w * 0.16;
     let list_w = usable_w * 0.25;
@@ -243,9 +243,10 @@ fn render(
         1 => {
             text(batch, settings_x + 14.0, section_y + 24.0, "PANEL PROFILE", white);
             text(batch, settings_x + 14.0, section_y + 42.0, "Selected display details", muted);
+            let distance_profile = format!("{:.1} BLOCKS", distance);
             let cards = [
                 (section_y + 68.0, "PLACEMENT MODE", mode_label),
-                (section_y + 132.0, "PANEL DISTANCE", &format!("{:.1} BLOCKS", distance)),
+                (section_y + 132.0, "PANEL DISTANCE", distance_profile.as_str()),
                 (section_y + 196.0, "PANEL SCALE", scale_label.as_str()),
             ];
             for (cy, title, value) in cards {
@@ -344,10 +345,6 @@ fn render(
     }
 
     // Publish the current hover action after all hit regions have been tested.
-    if header_action == 0 {
-        header_action = if resize_handle_over { 11 } else if over_close { 10 } else if over_add { 7 }
-            else if over_prev { 8 } else if over_next { 9 } else { 0 };
-    }
     let action = if header_action != 0 { header_action }
         else if hovered_panel_action != 0 { hovered_panel_action }
         else { settings_action };
